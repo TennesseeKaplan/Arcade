@@ -91,6 +91,21 @@
     .joystick { font-size: .75em; letter-spacing: normal; line-height: 1; }
     .hero .byline { font-size: 1rem; }
     .hero a { color: var(--accent); }
+    .reading-wave { white-space: nowrap; }
+    @media (prefers-reduced-motion: no-preference) {
+      .reading-wave span {
+        display: inline-block;
+        animation: reading-wave 2.8s ease-in-out infinite;
+      }
+      .reading-wave span:nth-child(2) { animation-delay: .12s; }
+      .reading-wave span:nth-child(3) { animation-delay: .24s; }
+      .reading-wave span:nth-child(4) { animation-delay: .36s; }
+      .reading-wave span:nth-child(5) { animation-delay: .48s; }
+    }
+    @keyframes reading-wave {
+      0%, 32%, 100% { transform: translateY(0); }
+      16% { transform: translateY(-.28em); }
+    }
     .game-cover { align-items: center; }
     .game-cover h3 {
       display: flex;
@@ -130,7 +145,7 @@
     <header class="hero">
       <h1>Arcade <span class="joystick" aria-hidden="true">🕹️</span></h1>
       <p class="byline">by Tennessee Kaplan</p>
-      <p>if you like to read, go to <a href="https://tennesseekaplan.com/">TennesseeKaplan.com</a></p>
+      <p><em class="reading-wave"><span>if</span> <span>you</span> <span>like</span> <span>to</span> <span>read</span></em>, go to <a href="https://tennesseekaplan.com/">TennesseeKaplan.com</a></p>
     </header>
     <section class="library" aria-labelledby="games">
       <h2 id="games">Games</h2>
