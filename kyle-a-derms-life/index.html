@@ -21,6 +21,13 @@
   h2 { font-size: 1.2rem; }
   .stats, #status { color: #dac9df; }
   #status { min-height: 1.4em; }
+  [hidden] { display: none !important; }
+  #movement { display: grid; grid-template-columns: repeat(3, 44px); gap: 3px; width: max-content; margin-top: 7px; touch-action: none; user-select: none; }
+  #movement button { padding: 0; background: #594b69; color: #fff0d3; }
+  #movement button:active { background: #877498; }
+  #movement [data-move="up"] { grid-column: 2; }
+  #movement [data-move="left"] { grid-column: 1; }
+  @media (not (any-pointer: coarse)) { #movement { display: none; } }
   #actions { display: flex; flex-wrap: wrap; gap: 6px; }
   button, input { min-height: 44px; font: inherit; border-radius: 8px; padding: 6px 10px; }
   button { border: 0; background: #ffce76; color: #26172b; font-weight: 800; touch-action: manipulation; cursor: pointer; }
@@ -42,14 +49,48 @@
     main.typing canvas { display: none; }
     main.typing .game { grid-template-columns: 1fr; }
   }
+  main.in-mine .game { position: relative; display: block; }
+  main.in-mine .panel { position: absolute; inset: auto 0 0; background: #302641ed; padding: 6px 10px; }
+  main.in-mine canvas { display: block; margin: auto; max-height: calc(100dvh - 85px); }
+  main.in-mine #heading { display: none; }
+  main.in-mine #movement { position: absolute; right: 8px; bottom: 8px; }
+  main.in-mine #stick { display: none; }
+  @media (any-pointer: coarse) { main.in-mine #actions { padding-right: 103px; } }
+  .top-hud { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  #cash { white-space: nowrap; font-weight: 800; color: #adf0ad; }
+  #sound { min-height: 30px; font-size: .72rem; }
+  #clock { display: inline-block; transition: transform .2s; transform-origin: right; }
+  #clock.glow { transform: scale(1.28); }
+  .scene-frame { position: relative; min-width: 0; }
+  #title-scroll { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: .6rem; text-align: center; padding: 1rem; background: #211a32ed; border-radius: 12px; }
+  #title-scroll p { max-width: 32ch; }
+  #title-scroll h2 { color: #ffce76; font-size: clamp(1.1rem, 3vw, 2rem); }
+  #movement { display: flex; align-items: center; gap: 9px; width: auto; }
+  #stick { width: 74px; height: 74px; display: grid; place-items: center; border-radius: 50%; background: #483b5b; touch-action: none; user-select: none; }
+  #knob { width: 34px; height: 34px; border-radius: 50%; background: #8e7da0; pointer-events: none; }
+  #movement .ab { width: 44px; border-radius: 50%; background: #ffce76; color: #26172b; }
+  @media (not (any-pointer: coarse)) { #movement { display: none; } }
+  @media (orientation: landscape) and (max-height: 390px) {
+    #stick { width: 59px; height: 59px; }
+    #knob { width: 29px; height: 29px; }
+    .beta-banner { margin-bottom: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { #clock { transition: none; } }
 </style>
 </head>
 <body>
 <main>
   <p class="beta-banner"><strong>BETA</strong><span>One playable day</span></p>
-  <header><h1>Kyle - A Derm’s Life</h1><time id="clock">6:00 AM</time></header>
+  <header><h1>Kyle - A Derm’s Life</h1><div class="top-hud"><button id="sound" type="button" aria-pressed="false">Mute</button><span id="cash" aria-label="Yacht fund">$0</span><time id="clock">6:00 AM</time></div></header>
   <div class="game">
-    <canvas id="scene" width="640" height="380" role="img" aria-label="Kyle’s bedroom"></canvas>
+    <div class="scene-frame">
+      <canvas id="scene" width="640" height="380" role="img" aria-label="Kyle’s bedroom"></canvas>
+      <div id="title-scroll">
+        <h2>Kyle - A Derm’s Life</h2>
+        <p>Five days to make $1,100 and buy a yacht. Fall short and it’s back to the bedroom as a full-time streamer.</p>
+        <button id="start" type="button">Start Day 1</button>
+      </div>
+    </div>
     <section class="panel" aria-labelledby="heading">
       <p class="stats" id="stats"></p>
       <h2 id="heading"></h2>
@@ -57,6 +98,11 @@
       <div id="meter" hidden aria-label="Hit the green zone"><span id="zone"></span><span id="needle"></span></div>
       <p id="exchange" hidden aria-live="polite"></p>
       <div id="actions"></div>
+      <div id="movement" aria-label="Game controls">
+        <div id="stick" aria-label="Movement joystick"><span id="knob"></span></div>
+        <button class="ab" id="game-a" type="button" aria-label="A, interact">A</button>
+        <button class="ab" id="game-b" type="button" aria-label="B, back or use item">B</button>
+      </div>
     </section>
   </div>
 </main>
@@ -65,15 +111,80 @@
 const byId = id => document.getElementById(id);
 const canvas = byId('scene');
 const ctx = canvas.getContext('2d');
+const kyleSprite = new Image();
+kyleSprite.src = 'data:image/png;base64,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';
+
 const dollars = amount => '$' + amount.toLocaleString('en-US');
-const storageKey = 'arcade-kyle-day-prototype-v1';
+const storageKey = 'arcade-kyle-day-one-day-v2';
 const yachtPrice = 1100;
 const affirmation = 'I AM A DOCTOR I AM A DOCTOR';
-const limits = { wake: 5, gym: 36, clinic: 76, mine: 112, exchange: 115, payout: 120 };
-const labels = { wake: 'Bachelor pad', gym: 'Gym', clinic: 'Derm clinic', mine: 'MineScape', exchange: 'Cash out', payout: 'End of day', done: 'Day complete', yacht: 'Jacksonville, Florida' };
+const limits = { gym: 21, gymPay: 24, clinic: 84, mine: 116, exchange: 120 };
+const labels = { wake: 'Bachelor pad', gym: 'Gym', gymPay: 'Gym payout', desk: 'Bachelor pad', dream: 'Daydream', clinic: 'Derm clinic', mine: 'MineScape', exchange: 'Cash out', payout: 'End of day', done: 'Day complete', yacht: 'Jacksonville, Florida' };
 const motion = matchMedia('(prefers-reduced-motion: reduce)');
 let state;
 let primary;
+let secondary;
+let titleOpen = true;
+let lifting = false;
+let clinicActive = false;
+let loot = null;
+let streak = 0;
+let sceneAt = 0;
+let dreamUntil = 0;
+let tickStamp = '';
+let musicBeat = -1;
+let muted = false;
+let monitorUntil = 0;
+let audio;
+const mobile = matchMedia('(any-pointer: coarse)');
+const equipment = ['Combat boots', 'Shield', 'Mace', 'Sword of Truth', 'Holy Water'];
+
+function tone(hz, duration, wave = 'sine', volume = .06, offset = 0) {
+  if (!audio || muted || audio.state !== 'running') return;
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+  const start = audio.currentTime + offset;
+  oscillator.type = wave;
+  oscillator.frequency.value = hz;
+  gain.gain.setValueAtTime(volume, start);
+  gain.gain.exponentialRampToValueAtTime(.001, start + duration);
+  oscillator.connect(gain).connect(audio.destination);
+  oscillator.start(start);
+  oscillator.stop(start + duration);
+}
+function saySound(words, rate = 1) {
+  if (muted || !audio || !('speechSynthesis' in window)) return;
+  const voice = new SpeechSynthesisUtterance(words);
+  voice.rate = rate;
+  voice.volume = .35;
+  speechSynthesis.speak(voice);
+}
+function feedback(success) {
+  if (success) {
+    streak++;
+    tone(370, .1, 'triangle');
+    tone(880, .23, 'sine', .09, .08);
+    if (streak % 5 === 0) saySound('Nice!');
+  } else {
+    streak = 0;
+    tone(92, .18, 'triangle', .13);
+    tone(70, .23, 'triangle', .12, .15);
+  }
+}
+function soundtrack(t) {
+  const music = {
+    gym: [[82, 82, 98, 74, 82, 110, 98, 74], 'sawtooth', .24, .022],
+    clinic: [[262, 330, 392, 440, 349, 330, 294, 392], 'triangle', .33, .033],
+    mine: [[392, 440, 523, 587, 523, 440, 349, 392], 'sine', .46, .045]
+  }[state.phase];
+  if (!music) return;
+  const [notes, wave, spacing, volume] = music;
+  const beat = Math.floor((t - sceneAt) / spacing);
+  if (beat === musicBeat) return;
+  musicBeat = beat;
+  tone(notes[Math.max(0, beat) % notes.length], spacing * .88, wave, volume);
+}
+
 let trialUntil = 0;
 let trialAt;
 let cursor = 0;
@@ -100,6 +211,76 @@ function save() {
 }
 function now() { return performance.now() / 1000; }
 let origin = now();
+let lastFrame = origin;
+const keyDirections = new Map([
+  ['KeyW', 'up'], ['ArrowUp', 'up'], ['KeyS', 'down'], ['ArrowDown', 'down'],
+  ['KeyA', 'left'], ['ArrowLeft', 'left'], ['KeyD', 'right'], ['ArrowRight', 'right']
+]);
+const keys = new Set();
+const pointers = new Map();
+const stations = {
+  desk: [{ id: 'pc', x: 505, y: 247, name: 'Computer' }],
+  wake: [{ id: 'gym', x: 575, y: 258, name: 'Gym door' }],
+  gym: [
+    { id: 'squat', x: 130, y: 240, name: 'Squat rack' },
+    { id: 'bench', x: 503, y: 240, name: 'Bench' },
+    { id: 'clinic', x: 583, y: 310, name: 'Clinic door' }
+  ],
+  clinic: [
+    { id: 'patient', x: 410, y: 240, name: 'Patient' },
+    { id: 'home', x: 576, y: 310, name: 'Go home' }
+  ],
+  mine: [
+    { id: 'beetle', x: 347, y: 242, name: 'Slag Beetle' },
+    { id: 'exchange', x: 566, y: 309, name: 'Cash out' }
+  ],
+  payout: [
+    { id: 'old-guy', x: 383, y: 240, name: 'Talk' },
+    { id: 'bed', x: 98, y: 282, name: 'End day' }
+  ]
+};
+const starts = { wake: 244, desk: 205, gym: 320, clinic: 150, mine: 178, payout: 218 };
+let x = 244, y = 244, facing = 1, walking = false, nearby = null, heardPayout = false;
+
+function resetWalk() {
+  x = starts[state.phase] ?? 244;
+  y = 244;
+  facing = 1;
+  walking = false;
+  nearby = null;
+  keys.clear();
+  pointers.clear();
+}
+
+function walk(dt) {
+  const available = stations[state.phase];
+  if (!available || monitorUntil || state.phase === 'mine' || trialUntil || titleOpen || lifting || clinicActive || loot) return;
+  const directions = new Set(pointers.values());
+  for (const key of keys) directions.add(keyDirections.get(key));
+  const dx = Number(directions.has('right')) - Number(directions.has('left'));
+  const dy = Number(directions.has('down')) - Number(directions.has('up'));
+  const length = Math.hypot(dx, dy);
+  walking = length > 0;
+  if (walking) {
+    if (dx) facing = dx;
+    x = Math.max(52, Math.min(591, x + dx * 218 * dt / length));
+    y = Math.max(202, Math.min(320, y + dy * 160 * dt / length));
+  }
+  let closest = null;
+  let radius = 50;
+  for (const station of available) {
+    const distance = Math.hypot(x - station.x, y - station.y);
+    if (distance < radius) {
+      radius = distance;
+      closest = station.id;
+    }
+  }
+  if (nearby === closest) return;
+  if (nearby === 'beetle') state.fighting = false;
+  nearby = closest;
+  if (nearby === 'squat' || nearby === 'bench') state.exercise = nearby === 'squat' ? 'Squat' : 'Bench';
+  renderControls();
+}
 
 function button(label, action, { main = false, pressed, disabled = false } = {}) {
   const element = document.createElement('button');
@@ -118,11 +299,23 @@ function refreshStats() {
     clinic: '♥'.repeat(state.hearts) + '♡'.repeat(3 - state.hearts),
     mine: 'Lv. ' + state.level + ' · ' + state.gear + ' · ' + state.gold + ' gold'
   };
-  byId('stats').textContent = [dollars(state.cash) + ' yacht fund', details[state.phase]].filter(Boolean).join('  ·  ');
+  byId('cash').textContent = dollars(state.cash);
+  byId('stats').textContent = details[state.phase] || '';
+  byId('stats').hidden = !details[state.phase];
 }
 function go(phase, message) {
   state.phase = phase;
   state.phaseStart = state.elapsed;
+  sceneAt = now();
+  musicBeat = -1;
+  lifting = false;
+  clinicActive = false;
+  loot = null;
+  monitorUntil = 0;
+  if (phase === 'dream') dreamUntil = now() + 1;
+  resetWalk();
+  if (phase === 'mine') { nearby = 'beetle'; x = 290; }
+  if (phase === 'payout') heardPayout = false;
   trialUntil = 0;
   hitUntil = 0;
   recoveryUntil = 0;
@@ -130,7 +323,7 @@ function go(phase, message) {
   if (phase === 'gym') trialAt = state.elapsed + 7 + Math.random() * 5;
   if (phase === 'clinic') { risk = false; target = .5; }
   if (phase === 'exchange') { state.exchangeStart = state.elapsed; lastExchangeStep = -1; }
-  if (phase === 'payout') {
+  if (phase === 'gymPay') {
     state.gymPay = state.failedGym || state.reps < 6 ? 40 : state.reps >= 15 ? 320 : 150;
     state.cash += state.gymPay;
   }
@@ -141,55 +334,78 @@ function go(phase, message) {
 function renderControls(message) {
   const p = state.phase;
   document.querySelector('main').classList.remove('typing');
+  document.querySelector('main').classList.toggle('in-mine', p === 'mine');
   byId('heading').textContent = labels[p];
   canvas.setAttribute('aria-label', labels[p] + ' cartoon scene');
   byId('actions').replaceChildren();
-  byId('meter').hidden = p !== 'clinic';
+  byId('meter').hidden = !clinicActive;
+  byId('movement').hidden = titleOpen || (!Object.hasOwn(stations, p) && p !== 'gymPay');
   byId('exchange').hidden = p !== 'exchange';
   primary = null;
+  secondary = null;
   refreshStats();
   if (p === 'wake') {
-    say('One day to try out Kyle’s yacht fund.');
-    button('Get up', () => { origin = now(); go('gym'); }, { main: true });
+    const input = matchMedia('(any-pointer: coarse)').matches ? 'Use the joystick.' : 'Use WASD or the arrow keys.';
+    say('Kyle: “Time for gym.” Walk to the gym door. ' + input);
+    if (nearby === 'gym') button('Enter gym', () => { origin = now(); go('gym'); }, { main: true });
   }
   if (p === 'gym') {
-    say(message || 'Choose squat or bench, then tap Lift quickly. Every three taps earns a rep.');
-    for (const exercise of ['Squat', 'Bench']) {
-      button(exercise === 'Squat' ? '← Squat' : 'Bench →', () => {
-        state.exercise = exercise;
-        renderControls();
-        byId('actions').querySelector('[aria-pressed="true"]').focus();
-      }, { pressed: state.exercise === exercise });
+    say(message || 'Walk up to the squat rack or bench.');
+    if (nearby === 'squat' || nearby === 'bench') {
+      if (lifting) {
+        say(message || state.exercise + ' · Tap A or Space. Every three taps earns a rep.');
+        button('Lift', lift, { main: true });
+        secondary = () => { lifting = false; renderControls(); };
+        button('Step off', secondary);
+      } else button(state.exercise, () => { lifting = true; tone(180, .1, 'triangle'); renderControls(); }, { main: true });
     }
-    button('Lift', lift, { main: true });
-    button('Clock in', () => go('clinic'));
+    if (nearby === 'clinic') button('Finish workout', () => go('gymPay'), { main: true });
   }
-  if (p === 'clinic') {
-    say(message || 'Stop the slider in the green zone to remove the mole.');
-    button('Easy · $100', () => changeRisk(false), { pressed: !risk });
-    button('Hard · $220', () => changeRisk(true), { pressed: risk });
-    button('Cut', cut, { main: true });
-    button('Go home', () => go('mine'));
-    updateZone();
-  }
-  if (p === 'mine') {
-    say(message || 'Attack the Slag Beetle to trade blows. Eat to recover health.');
-    button(state.fighting ? 'Fighting…' : 'Attack beetle', startFight, { main: true, disabled: state.fighting });
-    button('Eat', eat);
-    button('Cash out', () => go('exchange'));
-  }
-  if (p === 'exchange') {
-    say('Count out the night’s earnings.');
-    byId('exchange').textContent = state.gold + ' MineScape gold';
-  }
-  if (p === 'payout') {
+  if (p === 'gymPay') {
     const line = state.gymPay === 320 ? 'Hey, kid. Looking big today.'
       : state.gymPay === 150 ? 'You’re getting there, kid.'
       : 'Looking small today, kid. Best I can do.';
-    say('“' + line + '” +' + dollars(state.gymPay));
-    button('Buy yacht · ' + dollars(yachtPrice), buyYacht, { main: true, disabled: state.cash < yachtPrice });
-    button('End day', () => go('done'));
+    say((message ? message + ' ' : '') + '“' + line + '” +' + dollars(state.gymPay));
+    button('Clock in', () => go('clinic'), { main: true });
   }
+  if (p === 'clinic') {
+    say(message || 'Walk up to the patient chair.');
+    if (nearby === 'patient' && !clinicActive) button('See patients', () => {
+      clinicActive = true;
+      patientArrives();
+      renderControls('“I’m a different guy btw.”');
+    }, { main: true });
+    if (clinicActive) {
+      say(message || 'Choose easy or hard (1 or 2). Cut in the green zone.');
+      button('Easy · $100', () => changeRisk(false), { pressed: !risk });
+      button('Hard · $220', () => changeRisk(true), { pressed: risk });
+      button('Cut', cut, { main: true });
+      secondary = () => { clinicActive = false; renderControls(); };
+      updateZone();
+    }
+    if (nearby === 'home') button('Go home', () => go('desk'), { main: true });
+  }
+  if (p === 'desk') {
+    say('Walk to the desk to play MineScape.');
+    if (nearby === 'pc') button('Play MineScape', enterMonitor, { main: true });
+  }
+  if (p === 'mine') {
+    if (loot) {
+      say('You did it! The brave warrior gets ' + loot + '.');
+      button('✓ Equip', equipLoot, { main: true });
+    } else {
+      say(message || (state.fighting ? 'Trading blows. B eats a pear.' : 'Attack the Slag Beetle, or cash out.'));
+      button('Attack', startFight, { main: true, disabled: state.fighting });
+      button('Eat pear', eat);
+      secondary = eat;
+      button('Cash out', () => go('exchange'));
+    }
+  }
+  if (p === 'exchange') {
+    say('Kyle: “I need to convert this to dollars. Good thing there’s a way.”');
+    byId('exchange').textContent = state.gold + ' MineScape gold';
+  }
+  if (p === 'dream') say(state.cash >= yachtPrice / 5 ? 'Kyle dreams of the yacht.' : 'Kyle dreams he’s working the fryer.');
   if (p === 'done' || p === 'yacht') {
     say(p === 'yacht' ? 'Kyle sails off into the Jacksonville sunset.' :
       dollars(state.cash) + ' saved toward a ' + dollars(yachtPrice) + ' yacht.');
@@ -206,7 +422,7 @@ let taps = 0;
 function lift() {
   if (trialUntil) return;
   taps++;
-  if (taps % 3 === 0) state.reps++;
+  if (taps % 3 === 0) { state.reps++; feedback(true); }
   hitUntil = now() + .15;
   refreshStats();
 }
@@ -214,8 +430,16 @@ function badThoughts() {
   trialUntil = Math.min(state.elapsed + 13, limits.gym);
   trialAt = Infinity;
   document.querySelector('main').classList.add('typing');
+  byId('movement').hidden = true;
+  keys.clear();
+  pointers.clear();
+  walking = false;
   byId('actions').replaceChildren();
   primary = null;
+  if (mobile.matches) {
+    button(affirmation, finishAffirmation, { main: true });
+    return;
+  }
   const input = document.createElement('input');
   input.autocomplete = 'off';
   input.autocapitalize = 'characters';
@@ -224,12 +448,21 @@ function badThoughts() {
   input.placeholder = affirmation;
   input.addEventListener('input', () => {
     if (input.value.trim().replace(/\s+/g, ' ').toUpperCase() === affirmation) {
-      trialUntil = 0;
-      renderControls('You shook it off. Back to lifting.');
+      finishAffirmation();
     }
   });
   byId('actions').append(input);
   input.focus();
+}
+function finishAffirmation() {
+  trialUntil = 0;
+  feedback(true);
+  renderControls('You shook it off. Back to lifting.');
+}
+function patientArrives() {
+  tone(104, .16, 'triangle', .06);
+  tone(89, .16, 'triangle', .05, .12);
+  tone(118, .19, 'triangle', .06, .25);
 }
 function changeRisk(value) {
   risk = value;
@@ -242,11 +475,12 @@ function updateZone() {
   byId('zone').style.width = (zoneWidth() * 100) + '%';
 }
 function cut() {
-  if (now() < hitUntil || !state.hearts || state.patients >= 6) return;
+  if (!clinicActive || now() < hitUntil || !state.hearts || state.patients >= 6) return;
   state.patients++;
   const success = Math.abs(cursor - target) <= zoneWidth() / 2;
-  effect = success ? 'POP!' : 'I’m leaving!';
-  hitUntil = now() + .65;
+  effect = success ? '✓' : 'I’m leaving!';
+  hitUntil = now() + 1.2;
+  feedback(success);
   if (success) state.cash += risk ? 220 : 100;
   else state.hearts--;
   say(success ? 'Clean cut. +' + dollars(risk ? 220 : 100)
@@ -254,6 +488,13 @@ function cut() {
   target = .26 + Math.random() * .48;
   updateZone();
   refreshStats();
+}
+function enterMonitor() {
+  if (monitorUntil) return;
+  monitorUntil = now() + (motion.matches ? .03 : .6);
+  say('Kyle settles in at the computer.');
+  byId('actions').replaceChildren();
+  primary = null;
 }
 function startFight() {
   if (state.fighting || state.playerHp <= 0) return;
@@ -268,32 +509,39 @@ function eat() {
   say('Kyle eats a cave pear.');
 }
 function fightTick() {
-  if (!state.fighting || state.elapsed < state.nextAttack) return;
+  if (!state.fighting || nearby !== 'beetle' || state.elapsed < state.nextAttack) return;
   state.nextAttack = state.elapsed + .72;
-  state.enemyHp -= state.level > 1 ? 7 : 5;
+  state.enemyHp -= state.gear === 'Holy Water' ? state.enemyHp : state.level > 1 ? 5 + state.level : 5;
   hitUntil = now() + .23;
   if (state.enemyHp <= 0) {
     state.gold += 300;
     state.level++;
-    state.gear = 'Copper blade';
+    loot = equipment[Math.min(equipment.length - 1, state.level - 2)];
+    feedback(true);
     state.enemyHp = 18 + state.level * 2;
     state.fighting = false;
-    renderControls('Beetle down. +300 gold and a level. Copper blade equipped.');
+    renderControls();
   } else {
     state.playerHp -= 4;
     if (state.playerHp <= 0) {
       state.fighting = false;
+      feedback(false);
       go('exchange');
     }
   }
+}
+function equipLoot() {
+  state.gear = loot;
+  loot = null;
+  renderControls();
 }
 function exchangeTick() {
   const step = Math.min(2, Math.floor((state.elapsed - state.exchangeStart) / .85));
   if (step === lastExchangeStep) return;
   lastExchangeStep = step;
   byId('exchange').textContent = [
-    state.gold + ' MineScape gold',
-    state.gold * 2 + ' Venezuelan bolívares',
+    'Game Currency → Venezuelan Money → US Dollar',
+    state.gold + ' gold → ' + state.gold * 2 + ' bolívares → USD',
     dollars(Math.floor(state.gold / 5)) + ' USD'
   ][step];
   if (!motion.matches) byId('exchange').animate(
@@ -304,7 +552,7 @@ function exchangeTick() {
 function finishExchange() {
   state.cash += Math.floor(state.gold / 5);
   state.gold = 0;
-  go('payout');
+  go('dream');
 }
 function buyYacht() {
   if (state.cash < yachtPrice) return;
@@ -315,6 +563,7 @@ function restart() {
   state = fresh();
   taps = 0;
   origin = now();
+  streak = 0;
   go('wake');
 }
 
@@ -353,12 +602,19 @@ function caption(text, x, y, size = 22, color = '#fff1da') {
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
 }
-function kyle(x, y, scale, outfit, upset = false, flex = false) {
+function kyle(x, y, scale, outfit, upset = false, flex = false, direction = 1) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(scale, scale);
+  ctx.scale(scale * direction, scale);
   const skin = '#f7ae81';
   const coat = outfit === 'home' ? '#528d96' : '#fff5df';
+  if (!upset && (outfit === 'coat' || outfit === 'home') && kyleSprite.naturalWidth) {
+    const width = kyleSprite.naturalWidth * 190 / kyleSprite.naturalHeight;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(kyleSprite, -width / 2, -85, width, 190);
+    ctx.restore();
+    return;
+  }
   box(-31, 35, 30, 50, '#48507b');
   box(0, 35, 30, 50, '#48507b');
   box(-30, 78, 24, 18, skin);
@@ -417,13 +673,40 @@ function desk() {
   box(472, 201, 44, 8, '#474366');
   caption('MINESCAPE', 500, 174, 12, '#352840');
 }
+function drawKyleWalking(t, scale, outfit, flex = false, liftOffset = 0) {
+  const step = walking && !motion.matches ? Math.sin(t * 15) : 0;
+  const bounce = -Math.abs(step) * 7;
+  kyle(x + step * 6, 240 + (y - 244) * .55 + bounce + liftOffset, scale, outfit, false, flex, facing);
+}
+function drawStations() {
+  for (const station of stations[state.phase] || []) {
+    const active = station.id === nearby;
+    const labelY = Math.min(350, station.y + 61);
+    ctx.font = '900 15px system-ui';
+    const width = ctx.measureText(station.name).width + 18;
+    box(station.x - width / 2, labelY, width, 24, active ? '#ffce76' : '#332940', 7);
+    caption(station.name, station.x, labelY + 17, 15, active ? '#26172b' : '#fff1da');
+  }
+}
 function draw(t) {
   ctx.strokeStyle = '#292032';
   ctx.lineWidth = 3;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   const p = state.phase;
-  if (p === 'wake' || p === 'exchange' || p === 'done') {
+  const explore = !titleOpen && !lifting && !clinicActive && ['wake', 'gym', 'clinic', 'desk'].includes(p);
+  ctx.save();
+  if (p === 'desk' && monitorUntil && !motion.matches) {
+    const progress = 1 - Math.max(0, monitorUntil - t) / .6;
+    const zoom = 1 + progress * progress * 5;
+    ctx.translate(320 - 500 * zoom, 190 - 170 * zoom);
+    ctx.scale(zoom, zoom);
+  } else if (explore) {
+    const zoom = 1.24;
+    ctx.translate(-Math.max(0, Math.min(640 * (zoom - 1), x * zoom - 320)), -55);
+    ctx.scale(zoom, zoom);
+  }
+  if (p === 'wake' || p === 'desk' || p === 'exchange' || p === 'done') {
     room('#a77f83', '#5d4859');
     box(40, 60, 122, 92, '#5e5478');
     box(47, 67, 108, 78, '#eeb179');
@@ -432,7 +715,24 @@ function draw(t) {
     oval(187, 275, 35, 15, '#b89c76');
     box(59, 251, 71, 37, '#e3d5c1', 12);
     desk();
-    kyle(p === 'wake' ? 244 : 367, 238, .79, 'home');
+    if (p === 'wake') {
+      box(547, 140, 65, 137, '#62516e');
+      oval(557, 220, 4, 4, '#ffce76');
+      drawKyleWalking(t, .75, 'home');
+    } else if (p === 'desk') drawKyleWalking(t, .75, 'home');
+    else {
+      kyle(367, 238, .79, 'home');
+      if (p === 'exchange') {
+        const elapsed = t - sceneAt;
+        if (elapsed < .9) caption('Click!', 492, 121, 16);
+        if (elapsed > 1.7) {
+          for (let i = 0; i < 5; i++) {
+            const flight = Math.min(1.3, elapsed - 1.7);
+            box(485 - flight * (34 + i * 28), 157 + flight * (i - 1) * 16, 24, 11, '#8fe68e', 0);
+          }
+        }
+      }
+    }
   }
   if (p === 'gym') {
     room('#8b626f', '#46384e');
@@ -448,8 +748,23 @@ function draw(t) {
     caption('BENCH', 511, 208);
     const bounce = t < hitUntil && !motion.matches ? -9 : 0;
     const shake = trialUntil && !motion.matches ? Math.sin(t * 45) * 3 : 0;
-    kyle((trialUntil ? 320 : state.exercise === 'Squat' ? 222 : 398) + shake,
-      231 + bounce, .91, 'coat', Boolean(trialUntil), t < hitUntil);
+    if (trialUntil) kyle(320 + shake, 231, .85, 'coat', true);
+    else if (lifting) {
+      const up = t < hitUntil;
+      const bench = state.exercise === 'Bench';
+      const lx = bench ? 506 : 126;
+      if (bench) {
+        ctx.save();
+        ctx.translate(lx, 219);
+        ctx.rotate(Math.PI / 2);
+        kyle(0, 0, .52, 'coat');
+        ctx.restore();
+      } else kyle(lx, up ? 218 : 239, .76, 'coat');
+      const barY = bench ? (up ? 155 : 183) : (up ? 191 : 212);
+      box(lx - 58, barY, 116, 7, '#ada9aa', 0);
+      box(lx - 62, barY - 17, 19, 40, '#262839', 2);
+      box(lx + 43, barY - 17, 19, 40, '#262839', 2);
+    } else drawKyleWalking(t, .76, 'coat', t < hitUntil, bounce);
     if (trialUntil) {
       for (const [x, y, size] of [[135, 74, 61], [216, 53, 74], [333, 78, 91], [461, 64, 82], [525, 92, 51]]) {
         oval(x, y, size, 48, '#272033');
@@ -464,13 +779,39 @@ function draw(t) {
     box(54, 97, 140, 51, '#eae8d2');
     box(403, 203, 153, 91, '#64769d', 15);
     box(434, 284, 78, 22, '#465177');
-    oval(472, 187, 43, 47, '#e2a785');
-    oval(458, 154, 31, 15, '#edefe3');
-    box(431, 177, 30, 15, '#bac7d1', 6);
-    box(465, 177, 30, 15, '#bac7d1', 6);
-    if (effect !== 'POP!' || t >= hitUntil) oval(497, 202, 6, 5, '#864f53');
-    kyle(260, 237, .93, 'coat', false, t < hitUntil);
-    if (t < hitUntil) caption(effect, 467, 116, 31, '#ffe0a2');
+    const reaction = clinicActive && t < hitUntil;
+    const smiling = reaction && effect === '✓';
+    const angry = reaction && !smiling;
+    const old = (state.patients - Number(reaction)) % 2 === 0;
+    const px = angry ? 472 + (1.2 - Math.max(0, hitUntil - t)) * 120 : 472;
+    if (old) line([[px + 40, 203], [px + 54, 201], [px + 55, 282]]);
+    oval(px, 184, angry ? 52 : 40, angry ? 53 : 44, angry ? '#e55e52' : '#e2a785');
+    if (old) {
+      oval(px - 19, 153, 19, 11, '#edefe3');
+      oval(px + 17, 155, 5, 4, '#885954');
+    } else {
+      box(px - 35, 145, 70, 16, '#695150', 7);
+      oval(px, 203, 18, 5, '#64463e');
+    }
+    oval(px - 13, 178, 4, 5, '#292032');
+    oval(px + 13, 178, 4, 5, '#292032');
+    if (!reaction) oval(px + 25, 195, 5, 4, '#864f53');
+    if (clinicActive) kyle(301, 240, .76, 'coat');
+    else drawKyleWalking(t, .76, 'coat');
+    if (smiling) {
+      box(130, 52, 380, 271, '#a3baaa', 14);
+      oval(320, 183, 102, 102, '#e2a785');
+      oval(289, 164, 8, 12, '#292032');
+      oval(351, 164, 8, 12, '#292032');
+      line([[280, 212], [297, 228], [340, 228], [360, 212]]);
+      caption('✓', 437, 116, 48, '#16704e');
+    } else if (angry) {
+      oval(px - 64, 162, 16, 9, '#f1ebe1');
+      oval(px + 60, 154, 20, 11, '#f1ebe1');
+    } else if (clinicActive) {
+      box(345, 91, 244, 35, '#fff2de', 8);
+      caption('I’m a different guy btw', 467, 114, 15, '#26172b');
+    }
   }
   if (p === 'mine') {
     room('#53416f', '#393049');
@@ -481,14 +822,21 @@ function draw(t) {
     line([[489, 220], [514, 200], [531, 214]]);
     oval(413, 218, 8, 10, '#ffe280');
     oval(466, 218, 8, 10, '#ffe280');
-    kyle(178, 231, .82, 'home', false, state.fighting);
-    caption('HP ' + Math.max(0, state.playerHp), 178, 101);
+    drawKyleWalking(t, .72, 'home', state.fighting);
+    if (state.gear !== 'Tin blade') {
+      box(x + 27, 239, 25, 23, state.gear === 'Holy Water' ? '#72e2f4' : '#b9a361', 3);
+      caption(state.gear, x, 332, 16);
+    }
+    caption('HP ' + Math.max(0, state.playerHp), x, 101);
     caption('SLAG BEETLE · ' + state.enemyHp + ' HP', 440, 130, 19);
   }
-  if (p === 'payout') {
+  if (p === 'gymPay') {
     room('#a17c8b', '#504252');
-    kyle(218, 234, .88, 'coat', state.failedGym);
-    if (state.failedGym) oval(218, 282, 12, 7, '#2b385d');
+    drawKyleWalking(t, .76, 'coat');
+    if (state.failedGym) oval(x, 278 + (y - 244) * .55, 12, 7, '#2b385d');
+    const arrival = Math.max(0, 1 - (t - sceneAt) * 1.8) * 140;
+    ctx.save();
+    ctx.translate(arrival, 0);
     box(419, 198, 74, 115, '#9e756b', 17);
     oval(457, 167, 43, 42, '#dca584');
     oval(425, 150, 13, 17, '#ded5cf');
@@ -496,8 +844,16 @@ function draw(t) {
     line([[447, 189], [458, 181], [473, 187]]);
     box(383, 219, 40, 23, '#8bd3a1', 3);
     caption('USD', 403, 235, 12, '#292032');
+    ctx.restore();
   }
-  if (p === 'yacht') {
+  if (p === 'dream' && state.cash < yachtPrice / 5) {
+    room('#e8af78', '#805d5a');
+    kyle(260, 220, .8, 'home');
+    box(337, 214, 173, 109, '#a7a49d');
+    box(349, 216, 66, 40, '#d49a42');
+    caption('FRY COOK', 422, 123, 28, '#392337');
+  }
+  if (p === 'yacht' || (p === 'dream' && state.cash >= yachtPrice / 5)) {
     room('#eb8d85', '#5769a2');
     oval(482, 185, 69, 69, '#ffe59b');
     shape([[104, 240], [526, 240], [473, 321], [155, 321]], '#fff1da');
@@ -510,12 +866,18 @@ function draw(t) {
     shape([[326, 129], [323, 111], [341, 94], [366, 99], [378, 118], [375, 155], [363, 133], [358, 113]], '#4c3449');
     caption('JACKSONVILLE', 137, 64, 20, '#3d2948');
   }
+  if (!trialUntil && !lifting && !clinicActive && p !== 'mine') drawStations();
+  ctx.restore();
+  if (p === 'mine' && !motion.matches && t - sceneAt < .35) {
+    ctx.fillStyle = 'rgba(160, 225, 196, ' + (1 - (t - sceneAt) / .35) * .5 + ')';
+    ctx.fillRect(0, 0, 640, 380);
+  }
 }
 
 function updateClock() {
   const phase = state.phase;
   const hours = {
-    wake: 6,
+    wake: 6, gymPay: 8.95, desk: 17, dream: 22.5,
     gym: 6 + 3 * Math.min(1, (state.elapsed - state.phaseStart) / Math.max(1, limits.gym - state.phaseStart)),
     clinic: 9 + 8 * Math.min(1, (state.elapsed - state.phaseStart) / Math.max(1, limits.clinic - state.phaseStart)),
     mine: 17 + 5 * Math.min(1, (state.elapsed - state.phaseStart) / Math.max(1, limits.mine - state.phaseStart)),
@@ -524,10 +886,18 @@ function updateClock() {
   const minutes = Math.floor(hours[phase] * 60);
   const hour = Math.floor(minutes / 60);
   byId('clock').textContent = (hour % 12 || 12) + ':' + String(minutes % 60).padStart(2, '0') + (hour < 12 ? ' AM' : ' PM');
-  byId('clock').classList.toggle('glow', Boolean(trialUntil) ||
-    (phase in limits && state.elapsed < limits[phase] && limits[phase] - state.elapsed <= 5));
+  const remaining = limits[phase] - state.elapsed;
+  byId('clock').classList.toggle('glow', Boolean(trialUntil) || (remaining > 0 && remaining <= 4));
+  const tick = phase + Math.ceil(remaining);
+  if (remaining > 0 && remaining <= 4 && tick !== tickStamp) {
+    tickStamp = tick;
+    tone(330, .065, 'square', .14);
+  }
 }
 function update(t) {
+  if (titleOpen) { draw(t); requestAnimationFrame(ms => update(ms / 1000)); return; }
+  walk(Math.max(0, Math.min(.05, t - lastFrame)));
+  lastFrame = t;
   if (!['wake', 'done', 'yacht'].includes(state.phase)) {
     state.elapsed = Math.min(120, t - origin);
   }
@@ -537,18 +907,29 @@ function update(t) {
       say('BAD THOUGHTS · ' + Math.max(0, Math.ceil(trialUntil - state.elapsed)) + 's · ' + affirmation);
       if (state.elapsed >= trialUntil) {
         state.failedGym = true;
-        go('clinic', 'The bad thoughts won. Kyle peed his shorts and rushed to work.');
+        feedback(false);
+        go('gymPay', 'The bad thoughts won. Kyle peed his shorts.');
       }
     }
-    if (state.phase === 'gym' && state.elapsed >= limits.gym) go('clinic');
+    if (state.phase === 'gym' && state.elapsed >= limits.gym) go('gymPay');
   }
+  if (state.phase === 'gymPay' && state.elapsed >= limits.gymPay) go('clinic');
   if (state.phase === 'clinic') {
     const sweep = (t * (risk ? 1.08 : .81)) % 2;
     cursor = sweep < 1 ? sweep : 2 - sweep;
     byId('needle').style.left = (cursor * 100) + '%';
+    if (effect && t >= hitUntil) {
+      effect = '';
+      if (state.hearts && state.patients < 6) {
+        patientArrives();
+        say('“I’m a different guy btw.”');
+      }
+    }
     if (state.elapsed >= limits.clinic ||
-      ((!state.hearts || state.patients >= 6) && t >= hitUntil)) go('mine');
+      ((!state.hearts || state.patients >= 6) && t >= hitUntil)) go('desk');
   }
+  if (state.phase === 'desk' && !monitorUntil && state.elapsed >= 90.4) enterMonitor();
+  if (state.phase === 'desk' && monitorUntil && t >= monitorUntil) go('mine');
   if (state.phase === 'mine') {
     if (state.elapsed >= limits.mine) go('exchange');
     else fightTick();
@@ -557,24 +938,78 @@ function update(t) {
     exchangeTick();
     if (state.elapsed >= limits.exchange || state.elapsed - state.exchangeStart >= 2.7) finishExchange();
   }
+  if (state.phase === 'dream' && t >= dreamUntil) go('done');
+  soundtrack(t);
   updateClock();
   draw(t);
   requestAnimationFrame(ms => update(ms / 1000));
 }
 
 document.addEventListener('keydown', event => {
-  if (event.target instanceof HTMLInputElement || event.repeat) return;
-  if (event.code === 'Space' && primary) {
+  if (titleOpen || event.target instanceof HTMLInputElement || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (keyDirections.has(event.code) && Object.hasOwn(stations, state.phase) && !trialUntil) {
+    event.preventDefault();
+    keys.add(event.code);
+  }
+  if (nearby === 'patient' && !event.repeat && ['Digit1', 'Digit2'].includes(event.code)) {
+    event.preventDefault();
+    changeRisk(event.code === 'Digit2');
+  }
+  if (event.code === 'KeyX' && secondary && !event.repeat) secondary();
+  if (event.code === 'Space' && primary && !event.repeat) {
     event.preventDefault();
     primary();
   }
-  if (state.phase === 'gym' && !trialUntil && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    event.preventDefault();
-    state.exercise = event.key === 'ArrowLeft' ? 'Squat' : 'Bench';
-    renderControls();
-  }
+});
+document.addEventListener('keyup', event => keys.delete(event.code));
+window.addEventListener('blur', () => { keys.clear(); pointers.clear(); });
+const stick = byId('stick');
+function moveStick(event) {
+  const rect = stick.getBoundingClientRect();
+  const dx = event.clientX - rect.left - rect.width / 2;
+  const dy = event.clientY - rect.top - rect.height / 2;
+  const distance = Math.hypot(dx, dy);
+  const scale = Math.min(1, 21 / Math.max(1, distance));
+  byId('knob').style.transform = 'translate(' + dx * scale + 'px,' + dy * scale + 'px)';
+  pointers.clear();
+  if (distance < 8) return;
+  if (Math.abs(dx) > distance * .35) pointers.set('horizontal', dx < 0 ? 'left' : 'right');
+  if (Math.abs(dy) > distance * .35) pointers.set('vertical', dy < 0 ? 'up' : 'down');
+}
+stick.addEventListener('pointerdown', event => {
+  event.preventDefault();
+  stick.setPointerCapture(event.pointerId);
+  moveStick(event);
+});
+stick.addEventListener('pointermove', event => {
+  if (stick.hasPointerCapture(event.pointerId)) moveStick(event);
+});
+for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+  stick.addEventListener(eventName, () => { pointers.clear(); byId('knob').style.transform = ''; });
+}
+byId('game-a').addEventListener('click', () => primary?.());
+byId('game-b').addEventListener('click', () => secondary?.());
+byId('sound').addEventListener('click', event => {
+  muted = !muted;
+  event.currentTarget.setAttribute('aria-pressed', muted);
+  event.currentTarget.textContent = muted ? 'Unmute' : 'Mute';
+  if (muted && 'speechSynthesis' in window) speechSynthesis.cancel();
+});
+byId('start').addEventListener('click', () => {
+  titleOpen = false;
+  byId('title-scroll').hidden = true;
+  if (window.AudioContext) audio = new AudioContext();
+  audio?.resume().catch(() => {});
+  origin = now() - state.elapsed;
+  if (state.phase === 'wake') saySound('Time for gym.');
+  renderControls();
 });
 state = load() || fresh();
+state.fighting = false;
+resetWalk();
+if (state.phase === 'mine') { nearby = 'beetle'; x = 290; }
+if (state.phase === 'dream') dreamUntil = now() + 1;
+sceneAt = now();
 origin = now() - state.elapsed;
 trialAt = state.elapsed + 7 + Math.random() * 5;
 renderControls();
