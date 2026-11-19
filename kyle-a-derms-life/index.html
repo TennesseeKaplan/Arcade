@@ -21,6 +21,13 @@
   h2 { font-size: 1.2rem; }
   .stats, #status { color: #dac9df; }
   #status { min-height: 1.4em; }
+  [hidden] { display: none !important; }
+  #movement { display: grid; grid-template-columns: repeat(3, 44px); gap: 3px; width: max-content; margin-top: 7px; touch-action: none; user-select: none; }
+  #movement button { padding: 0; background: #594b69; color: #fff0d3; }
+  #movement button:active { background: #877498; }
+  #movement [data-move="up"] { grid-column: 2; }
+  #movement [data-move="left"] { grid-column: 1; }
+  @media (not (any-pointer: coarse)) { #movement { display: none; } }
   #actions { display: flex; flex-wrap: wrap; gap: 6px; }
   button, input { min-height: 44px; font: inherit; border-radius: 8px; padding: 6px 10px; }
   button { border: 0; background: #ffce76; color: #26172b; font-weight: 800; touch-action: manipulation; cursor: pointer; }
@@ -57,6 +64,12 @@
       <div id="meter" hidden aria-label="Hit the green zone"><span id="zone"></span><span id="needle"></span></div>
       <p id="exchange" hidden aria-live="polite"></p>
       <div id="actions"></div>
+      <div id="movement" aria-label="Move Kyle">
+        <button type="button" data-move="up" aria-label="Move up">↑</button>
+        <button type="button" data-move="left" aria-label="Move left">←</button>
+        <button type="button" data-move="down" aria-label="Move down">↓</button>
+        <button type="button" data-move="right" aria-label="Move right">→</button>
+      </div>
     </section>
   </div>
 </main>
@@ -100,6 +113,75 @@ function save() {
 }
 function now() { return performance.now() / 1000; }
 let origin = now();
+let lastFrame = origin;
+const keyDirections = new Map([
+  ['KeyW', 'up'], ['ArrowUp', 'up'], ['KeyS', 'down'], ['ArrowDown', 'down'],
+  ['KeyA', 'left'], ['ArrowLeft', 'left'], ['KeyD', 'right'], ['ArrowRight', 'right']
+]);
+const keys = new Set();
+const pointers = new Map();
+const stations = {
+  wake: [{ id: 'gym', x: 575, y: 258, name: 'Gym door' }],
+  gym: [
+    { id: 'squat', x: 130, y: 240, name: 'Squat rack' },
+    { id: 'bench', x: 503, y: 240, name: 'Bench' },
+    { id: 'clinic', x: 583, y: 310, name: 'Clinic door' }
+  ],
+  clinic: [
+    { id: 'patient', x: 410, y: 240, name: 'Patient' },
+    { id: 'home', x: 576, y: 310, name: 'Go home' }
+  ],
+  mine: [
+    { id: 'beetle', x: 347, y: 242, name: 'Slag Beetle' },
+    { id: 'exchange', x: 566, y: 309, name: 'Cash out' }
+  ],
+  payout: [
+    { id: 'old-guy', x: 383, y: 240, name: 'Talk' },
+    { id: 'bed', x: 98, y: 282, name: 'End day' }
+  ]
+};
+const starts = { wake: 244, gym: 320, clinic: 150, mine: 178, payout: 218 };
+let x = 244, y = 244, facing = 1, walking = false, nearby = null, heardPayout = false;
+
+function resetWalk() {
+  x = starts[state.phase] ?? 244;
+  y = 244;
+  facing = 1;
+  walking = false;
+  nearby = null;
+  keys.clear();
+  pointers.clear();
+}
+
+function walk(dt) {
+  const available = stations[state.phase];
+  if (!available || trialUntil) return;
+  const directions = new Set(pointers.values());
+  for (const key of keys) directions.add(keyDirections.get(key));
+  const dx = Number(directions.has('right')) - Number(directions.has('left'));
+  const dy = Number(directions.has('down')) - Number(directions.has('up'));
+  const length = Math.hypot(dx, dy);
+  walking = length > 0;
+  if (walking) {
+    if (dx) facing = dx;
+    x = Math.max(52, Math.min(591, x + dx * 218 * dt / length));
+    y = Math.max(202, Math.min(320, y + dy * 160 * dt / length));
+  }
+  let closest = null;
+  let radius = 50;
+  for (const station of available) {
+    const distance = Math.hypot(x - station.x, y - station.y);
+    if (distance < radius) {
+      radius = distance;
+      closest = station.id;
+    }
+  }
+  if (nearby === closest) return;
+  if (nearby === 'beetle') state.fighting = false;
+  nearby = closest;
+  if (nearby === 'squat' || nearby === 'bench') state.exercise = nearby === 'squat' ? 'Squat' : 'Bench';
+  renderControls();
+}
 
 function button(label, action, { main = false, pressed, disabled = false } = {}) {
   const element = document.createElement('button');
@@ -123,6 +205,8 @@ function refreshStats() {
 function go(phase, message) {
   state.phase = phase;
   state.phaseStart = state.elapsed;
+  resetWalk();
+  if (phase === 'payout') heardPayout = false;
   trialUntil = 0;
   hitUntil = 0;
   recoveryUntil = 0;
@@ -144,51 +228,59 @@ function renderControls(message) {
   byId('heading').textContent = labels[p];
   canvas.setAttribute('aria-label', labels[p] + ' cartoon scene');
   byId('actions').replaceChildren();
-  byId('meter').hidden = p !== 'clinic';
+  byId('meter').hidden = nearby !== 'patient';
+  byId('movement').hidden = !Object.hasOwn(stations, p);
   byId('exchange').hidden = p !== 'exchange';
   primary = null;
   refreshStats();
   if (p === 'wake') {
-    say('One day to try out Kyle’s yacht fund.');
-    button('Get up', () => { origin = now(); go('gym'); }, { main: true });
+    const input = matchMedia('(any-pointer: coarse)').matches ? 'Use the direction pad.' : 'Use WASD or the arrow keys.';
+    say('Walk to the gym door. ' + input);
+    if (nearby === 'gym') button('Enter gym', () => { origin = now(); go('gym'); }, { main: true });
   }
   if (p === 'gym') {
-    say(message || 'Choose squat or bench, then tap Lift quickly. Every three taps earns a rep.');
-    for (const exercise of ['Squat', 'Bench']) {
-      button(exercise === 'Squat' ? '← Squat' : 'Bench →', () => {
-        state.exercise = exercise;
-        renderControls();
-        byId('actions').querySelector('[aria-pressed="true"]').focus();
-      }, { pressed: state.exercise === exercise });
+    say(message || 'Walk up to the squat rack or bench.');
+    if (nearby === 'squat' || nearby === 'bench') {
+      say(message || state.exercise + ' · Tap Lift or press Space. Every three taps earns a rep.');
+      button('Lift', lift, { main: true });
     }
-    button('Lift', lift, { main: true });
-    button('Clock in', () => go('clinic'));
+    if (nearby === 'clinic') button('Clock in', () => go('clinic'), { main: true });
   }
   if (p === 'clinic') {
-    say(message || 'Stop the slider in the green zone to remove the mole.');
-    button('Easy · $100', () => changeRisk(false), { pressed: !risk });
-    button('Hard · $220', () => changeRisk(true), { pressed: risk });
-    button('Cut', cut, { main: true });
-    button('Go home', () => go('mine'));
-    updateZone();
+    say(message || 'Walk up to the patient chair.');
+    if (nearby === 'patient') {
+      say(message || 'Easy or hard (1 or 2). Press Space or Cut in the green zone.');
+      button('Easy · $100', () => changeRisk(false), { pressed: !risk });
+      button('Hard · $220', () => changeRisk(true), { pressed: risk });
+      button('Cut', cut, { main: true });
+      updateZone();
+    }
+    if (nearby === 'home') button('Go home', () => go('mine'), { main: true });
   }
   if (p === 'mine') {
-    say(message || 'Attack the Slag Beetle to trade blows. Eat to recover health.');
-    button(state.fighting ? 'Fighting…' : 'Attack beetle', startFight, { main: true, disabled: state.fighting });
-    button('Eat', eat);
-    button('Cash out', () => go('exchange'));
+    say(message || 'Walk up to the Slag Beetle to fight.');
+    if (nearby === 'beetle') {
+      say(message || (state.fighting ? 'Trading blows. Eat a cave pear to heal.' : 'Attack, then stay close to trade blows.'));
+      button(state.fighting ? 'Eat' : 'Attack beetle', state.fighting ? eat : startFight, { main: true });
+    }
+    if (nearby === 'exchange') button('Cash out', () => go('exchange'), { main: true });
   }
   if (p === 'exchange') {
     say('Count out the night’s earnings.');
     byId('exchange').textContent = state.gold + ' MineScape gold';
   }
   if (p === 'payout') {
-    const line = state.gymPay === 320 ? 'Hey, kid. Looking big today.'
-      : state.gymPay === 150 ? 'You’re getting there, kid.'
-      : 'Looking small today, kid. Best I can do.';
-    say('“' + line + '” +' + dollars(state.gymPay));
-    button('Buy yacht · ' + dollars(yachtPrice), buyYacht, { main: true, disabled: state.cash < yachtPrice });
-    button('End day', () => go('done'));
+    say(heardPayout ? 'Walk to End day when you’re ready.' : 'Walk up to the old guy.');
+    if (nearby === 'old-guy' && !heardPayout) {
+      button('Talk', () => { heardPayout = true; renderControls(); }, { main: true });
+    } else if (nearby === 'old-guy') {
+      const line = state.gymPay === 320 ? 'Hey, kid. Looking big today.'
+        : state.gymPay === 150 ? 'You’re getting there, kid.'
+        : 'Looking small today, kid. Best I can do.';
+      say('“' + line + '” +' + dollars(state.gymPay));
+      if (state.cash >= yachtPrice) button('Buy yacht · ' + dollars(yachtPrice), buyYacht, { main: true });
+    }
+    if (nearby === 'bed') button('End day', () => go('done'), { main: true });
   }
   if (p === 'done' || p === 'yacht') {
     say(p === 'yacht' ? 'Kyle sails off into the Jacksonville sunset.' :
@@ -214,6 +306,10 @@ function badThoughts() {
   trialUntil = Math.min(state.elapsed + 13, limits.gym);
   trialAt = Infinity;
   document.querySelector('main').classList.add('typing');
+  byId('movement').hidden = true;
+  keys.clear();
+  pointers.clear();
+  walking = false;
   byId('actions').replaceChildren();
   primary = null;
   const input = document.createElement('input');
@@ -268,7 +364,7 @@ function eat() {
   say('Kyle eats a cave pear.');
 }
 function fightTick() {
-  if (!state.fighting || state.elapsed < state.nextAttack) return;
+  if (!state.fighting || nearby !== 'beetle' || state.elapsed < state.nextAttack) return;
   state.nextAttack = state.elapsed + .72;
   state.enemyHp -= state.level > 1 ? 7 : 5;
   hitUntil = now() + .23;
@@ -353,10 +449,10 @@ function caption(text, x, y, size = 22, color = '#fff1da') {
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
 }
-function kyle(x, y, scale, outfit, upset = false, flex = false) {
+function kyle(x, y, scale, outfit, upset = false, flex = false, direction = 1) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(scale, scale);
+  ctx.scale(scale * direction, scale);
   const skin = '#f7ae81';
   const coat = outfit === 'home' ? '#528d96' : '#fff5df';
   box(-31, 35, 30, 50, '#48507b');
@@ -417,6 +513,20 @@ function desk() {
   box(472, 201, 44, 8, '#474366');
   caption('MINESCAPE', 500, 174, 12, '#352840');
 }
+function drawKyleWalking(t, scale, outfit, flex = false, liftOffset = 0) {
+  const bounce = walking && !motion.matches ? Math.sin(t * 21) * 4 : 0;
+  kyle(x, 240 + (y - 244) * .55 + bounce + liftOffset, scale, outfit, false, flex, facing);
+}
+function drawStations() {
+  for (const station of stations[state.phase] || []) {
+    const active = station.id === nearby;
+    const labelY = Math.min(350, station.y + 61);
+    ctx.font = '900 15px system-ui';
+    const width = ctx.measureText(station.name).width + 18;
+    box(station.x - width / 2, labelY, width, 24, active ? '#ffce76' : '#332940', 7);
+    caption(station.name, station.x, labelY + 17, 15, active ? '#26172b' : '#fff1da');
+  }
+}
 function draw(t) {
   ctx.strokeStyle = '#292032';
   ctx.lineWidth = 3;
@@ -432,7 +542,11 @@ function draw(t) {
     oval(187, 275, 35, 15, '#b89c76');
     box(59, 251, 71, 37, '#e3d5c1', 12);
     desk();
-    kyle(p === 'wake' ? 244 : 367, 238, .79, 'home');
+    if (p === 'wake') {
+      box(547, 140, 65, 137, '#62516e');
+      oval(557, 220, 4, 4, '#ffce76');
+      drawKyleWalking(t, .75, 'home');
+    } else kyle(367, 238, .79, 'home');
   }
   if (p === 'gym') {
     room('#8b626f', '#46384e');
@@ -448,8 +562,8 @@ function draw(t) {
     caption('BENCH', 511, 208);
     const bounce = t < hitUntil && !motion.matches ? -9 : 0;
     const shake = trialUntil && !motion.matches ? Math.sin(t * 45) * 3 : 0;
-    kyle((trialUntil ? 320 : state.exercise === 'Squat' ? 222 : 398) + shake,
-      231 + bounce, .91, 'coat', Boolean(trialUntil), t < hitUntil);
+    if (trialUntil) kyle(320 + shake, 231, .85, 'coat', true);
+    else drawKyleWalking(t, .76, 'coat', t < hitUntil, bounce);
     if (trialUntil) {
       for (const [x, y, size] of [[135, 74, 61], [216, 53, 74], [333, 78, 91], [461, 64, 82], [525, 92, 51]]) {
         oval(x, y, size, 48, '#272033');
@@ -469,7 +583,7 @@ function draw(t) {
     box(431, 177, 30, 15, '#bac7d1', 6);
     box(465, 177, 30, 15, '#bac7d1', 6);
     if (effect !== 'POP!' || t >= hitUntil) oval(497, 202, 6, 5, '#864f53');
-    kyle(260, 237, .93, 'coat', false, t < hitUntil);
+    drawKyleWalking(t, .76, 'coat', t < hitUntil);
     if (t < hitUntil) caption(effect, 467, 116, 31, '#ffe0a2');
   }
   if (p === 'mine') {
@@ -481,14 +595,14 @@ function draw(t) {
     line([[489, 220], [514, 200], [531, 214]]);
     oval(413, 218, 8, 10, '#ffe280');
     oval(466, 218, 8, 10, '#ffe280');
-    kyle(178, 231, .82, 'home', false, state.fighting);
-    caption('HP ' + Math.max(0, state.playerHp), 178, 101);
+    drawKyleWalking(t, .72, 'home', state.fighting);
+    caption('HP ' + Math.max(0, state.playerHp), x, 101);
     caption('SLAG BEETLE · ' + state.enemyHp + ' HP', 440, 130, 19);
   }
   if (p === 'payout') {
     room('#a17c8b', '#504252');
-    kyle(218, 234, .88, 'coat', state.failedGym);
-    if (state.failedGym) oval(218, 282, 12, 7, '#2b385d');
+    drawKyleWalking(t, .76, 'coat');
+    if (state.failedGym) oval(x, 278 + (y - 244) * .55, 12, 7, '#2b385d');
     box(419, 198, 74, 115, '#9e756b', 17);
     oval(457, 167, 43, 42, '#dca584');
     oval(425, 150, 13, 17, '#ded5cf');
@@ -510,6 +624,7 @@ function draw(t) {
     shape([[326, 129], [323, 111], [341, 94], [366, 99], [378, 118], [375, 155], [363, 133], [358, 113]], '#4c3449');
     caption('JACKSONVILLE', 137, 64, 20, '#3d2948');
   }
+  if (!trialUntil) drawStations();
 }
 
 function updateClock() {
@@ -528,6 +643,8 @@ function updateClock() {
     (phase in limits && state.elapsed < limits[phase] && limits[phase] - state.elapsed <= 5));
 }
 function update(t) {
+  walk(Math.max(0, Math.min(.05, t - lastFrame)));
+  lastFrame = t;
   if (!['wake', 'done', 'yacht'].includes(state.phase)) {
     state.elapsed = Math.min(120, t - origin);
   }
@@ -563,18 +680,35 @@ function update(t) {
 }
 
 document.addEventListener('keydown', event => {
-  if (event.target instanceof HTMLInputElement || event.repeat) return;
-  if (event.code === 'Space' && primary) {
+  if (event.target instanceof HTMLInputElement || event.ctrlKey || event.altKey || event.metaKey) return;
+  if (keyDirections.has(event.code) && Object.hasOwn(stations, state.phase) && !trialUntil) {
+    event.preventDefault();
+    keys.add(event.code);
+  }
+  if (nearby === 'patient' && !event.repeat && ['Digit1', 'Digit2'].includes(event.code)) {
+    event.preventDefault();
+    changeRisk(event.code === 'Digit2');
+  }
+  if (event.code === 'Space' && primary && !event.repeat) {
     event.preventDefault();
     primary();
   }
-  if (state.phase === 'gym' && !trialUntil && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
-    event.preventDefault();
-    state.exercise = event.key === 'ArrowLeft' ? 'Squat' : 'Bench';
-    renderControls();
-  }
 });
+document.addEventListener('keyup', event => keys.delete(event.code));
+window.addEventListener('blur', () => { keys.clear(); pointers.clear(); });
+for (const padButton of byId('movement').querySelectorAll('[data-move]')) {
+  padButton.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    padButton.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, padButton.dataset.move);
+  });
+  for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture']) {
+    padButton.addEventListener(eventName, event => pointers.delete(event.pointerId));
+  }
+}
 state = load() || fresh();
+state.fighting = false;
+resetWalk();
 origin = now() - state.elapsed;
 trialAt = state.elapsed + 7 + Math.random() * 5;
 renderControls();
