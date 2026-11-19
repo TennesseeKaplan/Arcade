@@ -3,25 +3,106 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pick a browser game and play at Arcade.">
   <title>Arcade</title>
   <style>
-    body { margin: 0; background: #231b2b; color: #fff1ce; font: 1rem/1.5 system-ui, sans-serif; }
-    main { max-width: 42rem; margin: 12vh auto; padding: 0 1.25rem; }
-    h1 { font-size: clamp(2.5rem, 10vw, 5rem); line-height: 1; margin: 0 0 2rem; }
-    article { background: #39283e; border: 1px solid #76587a; border-radius: 1rem; padding: 1.5rem; }
-    h2 { margin: 0; }
-    a { display: inline-block; padding: .65rem 1rem; border-radius: .45rem; background: #ffd27e; color: #231b2b; font-weight: 700; }
-    a:focus-visible { outline: 2px solid #fff1ce; outline-offset: 4px; }
+    :root {
+      color-scheme: dark;
+      --background: #17131d;
+      --panel: #211b29;
+      --text: #fff5df;
+      --muted: #ccbdce;
+      --accent: #ffc872;
+      --border: #514257;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--text);
+      font: 1rem/1.6 system-ui, sans-serif;
+    }
+    main { width: min(100% - 2rem, 72rem); margin: 0 auto; }
+    .hero { padding: clamp(3rem, 10vw, 8rem) 0 2.5rem; border-bottom: 1px solid var(--border); }
+    h1 {
+      margin: 0;
+      color: var(--accent);
+      font-size: clamp(3.5rem, 14vw, 10rem);
+      font-weight: 900;
+      letter-spacing: -.085em;
+      line-height: .95;
+    }
+    .hero p { margin: 1rem 0 0; color: var(--muted); font-size: 1.125rem; }
+    .library { padding: 2rem 0 4rem; }
+    .library h2 { margin: 0 0 1rem; font-size: 1.375rem; }
+    .game-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+      gap: 1.25rem;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .game-grid li { display: flex; }
+    .game-card {
+      display: flex;
+      width: 100%;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      background: var(--panel);
+    }
+    .game-cover {
+      display: grid;
+      min-height: 10rem;
+      align-items: end;
+      padding: 1.25rem;
+      background:
+        repeating-linear-gradient(135deg, transparent 0 17px, #3c23451f 17px 19px),
+        linear-gradient(135deg, #633453, #48295a);
+    }
+    .game-cover h3 { margin: 0; font-size: clamp(1.75rem, 5vw, 2.35rem); line-height: 1.05; }
+    .game-details { display: flex; flex: 1; flex-direction: column; align-items: flex-start; padding: 1.25rem; }
+    .game-details p { margin: 0 0 1.25rem; color: var(--muted); }
+    .play {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      margin-top: auto;
+      padding: .5rem 1rem;
+      border-radius: .5rem;
+      background: var(--accent);
+      color: #231726;
+      font-weight: 750;
+      text-decoration: none;
+    }
+    .play:hover { background: #ffe2a9; }
+    .play:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Arcade</h1>
-    <article>
-      <h2>Carl Eats Éclairs</h2>
-      <p>Help Carl satisfy his éclair craving and make it home to Manila.</p>
-      <a href="./carl-eats-eclairs/">Play Carl Eats Éclairs</a>
-    </article>
+    <header class="hero">
+      <h1>Arcade</h1>
+      <p>Pick a game and play in your browser.</p>
+    </header>
+    <section class="library" aria-labelledby="games">
+      <h2 id="games">Games</h2>
+      <ul class="game-grid">
+        <li>
+          <article class="game-card">
+            <div class="game-cover">
+              <h3>Carl Eats Éclairs</h3>
+            </div>
+            <div class="game-details">
+              <p>Help Carl satisfy his éclair craving and make it home to Manila.</p>
+              <a class="play" href="./carl-eats-eclairs/">Play Carl Eats Éclairs</a>
+            </div>
+          </article>
+        </li>
+      </ul>
+    </section>
   </main>
 </body>
 </html>
