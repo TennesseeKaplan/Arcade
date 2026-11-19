@@ -37,7 +37,7 @@
     .library h2 { margin: 0 0 1rem; font-size: 1.375rem; }
     .game-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 1.25rem;
       margin: 0;
       padding: 0;
@@ -79,21 +79,64 @@
     }
     .play:hover { background: #ffe2a9; }
     .play:focus-visible { outline: 2px solid var(--text); outline-offset: 4px; }
+    .hero { text-align: center; }
+    .hero h1 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .19em;
+      font-size: clamp(2.75rem, 11vw, 9rem);
+      letter-spacing: -.06em;
+    }
+    .joystick { font-size: .75em; letter-spacing: normal; line-height: 1; }
+    .hero .byline { font-size: 1rem; }
+    .game-cover { align-items: center; }
+    .game-cover h3 {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+    }
+    .carl-sprite {
+      flex: none;
+      width: 2.5rem;
+      height: auto;
+      image-rendering: pixelated;
+    }
+    .game-grid .coming-soon {
+      min-height: 9rem;
+      align-items: center;
+      justify-content: center;
+      padding: .75rem;
+      border: 1px dashed #6a5870;
+      border-radius: 1rem;
+      background: var(--panel);
+      color: var(--muted);
+      font-weight: 650;
+      text-align: center;
+    }
+    @media (max-width: 47rem) {
+      .game-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: .75rem;
+      }
+      .featured-game { grid-column: 1 / -1; }
+      .game-grid .coming-soon { min-height: 6rem; }
+    }
   </style>
 </head>
 <body>
   <main>
     <header class="hero">
-      <h1>Arcade</h1>
-      <p>Pick a game and play in your browser.</p>
+      <h1>Arcade <span class="joystick" aria-hidden="true">🕹️</span></h1>
+      <p class="byline">by Tennessee Kaplan</p>
     </header>
     <section class="library" aria-labelledby="games">
       <h2 id="games">Games</h2>
       <ul class="game-grid">
-        <li>
+        <li class="featured-game">
           <article class="game-card">
             <div class="game-cover">
-              <h3>Carl Eats Éclairs</h3>
+              <h3><canvas class="carl-sprite" width="16" height="28" aria-hidden="true"></canvas> Carl Eats Éclairs</h3>
             </div>
             <div class="game-details">
               <p>Help Carl satisfy his éclair craving and make it home to Manila.</p>
@@ -101,8 +144,37 @@
             </div>
           </article>
         </li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
+        <li class="coming-soon">Coming Soon</li>
       </ul>
     </section>
   </main>
+  <script>
+    // Carl's standing sprite, using the same pixel rectangles as the game.
+    const carlPixels = [
+      [1,23,14,3,"#745562"],
+      [3,19,4,6,"#28253e"],
+      [9,19,4,6,"#28253e"],
+      [2,10,12,10,"#376a64"],
+      [0,11,3,7,"#bd8256"],
+      [13,11,3,7,"#bd8256"],
+      [2,1,12,11,"#d69561"],
+      [2,0,12,4,"#322733"],
+      [1,2,3,5,"#322733"],
+      [7,5,1,2,"#392937"],
+      [12,5,1,2,"#392937"],
+    ];
+    const sprite = document.querySelector(".carl-sprite").getContext("2d");
+    for (const [x, y, width, height, color] of carlPixels) {
+      sprite.fillStyle = color;
+      sprite.fillRect(x, y, width, height);
+    }
+  </script>
 </body>
 </html>
