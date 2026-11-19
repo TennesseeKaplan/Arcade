@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Carl Eats Éclairs</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#231b2b;color:#fff1ce;font:600 15px system-ui,sans-serif}main{width:min(960px,96vw);margin:24px auto}header,footer,#hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font:700 clamp(26px,5vw,52px) Georgia;margin:4px 0 14px;color:#ffd687}button{background:#ffd687;color:#301c2b;border:0;border-radius:6px;padding:9px 14px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid white;outline-offset:3px}#hud{background:#3c2a40;padding:10px 14px;border-radius:8px 8px 0 0;font-variant-numeric:tabular-nums}#stage{position:relative;background:#342238}canvas{display:block;width:100%;image-rendering:pixelated}#overlay{position:absolute;inset:0;display:grid;align-items:center;justify-items:center;background:#24182c88;padding:10px}#overlay[hidden]{display:none}article{width:min(460px,100%);text-align:center;background:#34243af5;border:2px solid #e5a662;padding:clamp(8px,3vw,24px);border-radius:10px}h2{font:700 clamp(19px,4vw,38px) Georgia;margin:0;color:#ffdb91}p{margin:8px 0 12px}#credits[hidden]{display:none}#credits{color:#ead6dc}#overlay.ending{background:#231b2b}#overlay.ending article{animation:appear .55s ease-out}@keyframes appear{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){#overlay.ending article{animation:none}}footer{padding:10px 0;color:#ead6dc}#touch, #touch-help { display: none; }
+#joystick {
+  width: 108px; aspect-ratio: 1; position: relative; display: grid; place-items: center;
+  border: 2px solid #e5a662; border-radius: 50%; background: #3c2a40;
+  box-shadow: inset 0 0 0 9px #231b2b; touch-action: none; user-select: none;
+}
+#stick {
+  width: 42%; aspect-ratio: 1; border-radius: 50%; background: #ffd687;
+  box-shadow: 0 3px 0 #a66a47; pointer-events: none;
+}
+#throw { min-width: 72px; min-height: 56px; touch-action: none; user-select: none; }
+#throw:active { background: #ffebbc; }
+@media (any-pointer: coarse) {
+  #keyboard-help { display: none; }
+  #touch-help { display: inline; }
+  #touch { display: flex; align-items: center; justify-content: space-between; }
+}
+@media(max-width:450px){
+  main{margin:12px auto}
+  header{gap:4px;margin-bottom:8px}
+  h1{margin-bottom:4px}
+  #hud{display:grid;grid-template-columns:1fr 1fr;gap:5px 10px;font-size:14px}
+  #score,#clock{text-align:right}
+  canvas{height:auto}
+  #overlay{padding:6px}
+  article{padding:8px}
+}
+@media (any-pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
+  main {
+    width: min(1200px, 100%); height: 100dvh; margin: auto;
+    padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
+      max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+    display: grid; grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr);
+    container-type: size;
+  }
+  header { margin: 0; flex-wrap: nowrap; }
+  h1 { font-size: clamp(18px, 5dvh, 26px); margin: 0; }
+  header button { min-height: 44px; padding: 4px 9px; font-size: 14px; }
+  #hud { display: flex; gap: 4px; flex-wrap: nowrap; font-size: 14px; padding: 3px 8px; }
+  #stage {
+    justify-self: center; align-self: center;
+    width: min(calc(100cqw - 184px), calc((100cqh - 74px) * 384 / 232));
+    aspect-ratio: 384 / 232;
+  }
+  footer { display: none; }
+  #touch {
+    position: fixed; bottom: max(10px, env(safe-area-inset-bottom));
+    left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right));
+    pointer-events: none;
+  }
+  #touch > * { pointer-events: auto; }
+  #joystick { width: clamp(64px, 24dvh, 100px); }
+  #throw { min-width: 64px; }
+  article { padding: 6px; max-height: 100%; overflow: auto; }
+  article p { margin: 4px 0; }
+  #overlay { overflow: auto; }
+}
+</style>
+<main>
+<header><h1>Carl Eats Éclairs</h1><div><button id="pause" type="button">Pause</button> <button id="mute" type="button" aria-pressed="false">Sound on</button></div></header>
+<div id="hud"><span id="street"></span><span id="score"></span><span id="hearts"></span><span id="clock"></span></div>
+<div id="stage"><canvas width="384" height="232" aria-label="Pixel-art Park Slope game board"></canvas>
+<div id="overlay"><article><h2 id="heading"></h2><p id="credits" hidden></p><p id="message"></p><button id="action" type="button"></button></article></div></div>
+<footer><span id="keyboard-help">Move with WASD or arrows · Space throws a controller · P pauses</span><span id="touch-help">Drag the joystick to move. Tap or hold Throw.</span></footer>
+<div id="touch"><div id="joystick" role="group" aria-label="Drag joystick to move"><div id="stick"></div></div><button id="throw" type="button">Throw</button></div>
+</main>
+<script>
+'use strict';
+const el = id => document.getElementById(id);
+const ctx = document.querySelector('canvas').getContext('2d');
+const levels = [
+  {name:'Fifth Avenue', shop:'BUTTER & CRUMB', goal:8, time:60, speed:17, enemies:[[349,135],[212,207]], decor:'#b96850', spots:[[59,99],[124,112],[201,101],[275,102],[338,112],[322,176],[240,184],[144,191],[64,177]]},
+  {name:'Seventh Avenue', shop:'SLOPE SWEETS', goal:10, time:60, speed:22, enemies:[[347,100],[210,212],[31,208]], decor:'#86547b', spots:[[53,99],[103,117],[162,100],[218,113],[286,99],[342,104],[330,172],[285,209],[219,167],[147,202],[83,174],[40,211]]},
+  {name:'Prospect Park West', shop:'LAST BITE', goal:12, time:65, speed:27, enemies:[[344,99],[237,207],[42,218],[268,126]], decor:'#506d62', spots:[[38,98],[88,114],[137,99],[192,112],[254,99],[311,114],[355,100],[345,192],[294,171],[242,203],[174,171],[125,213],[73,179],[33,193]]}
+];
+let level = 0, mode = 'intro', carl, pastries, enemies, shots, effects, remaining, points, hp, cooldown, grace, previous;
+const keys = new Set();
+let touchThrow = false, throwPointer = null, stickPointer = null;
+let stickX = 0, stickY = 0;
+const touchInput = window.matchMedia('(any-pointer: coarse)');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+let endingElapsed = 0;
+const kissTime = 1.6;
+const creditsTime = 4.9;
+const ticketTime = 6.4;
+const movement = [['arrowleft','a'],['arrowright','d'],['arrowup','w'],['arrowdown','s']];
+const pressed = pair => pair.some(key => keys.has(key));
+const clamp = (value,min,max) => Math.min(max,Math.max(min,value));
+const distance = (a,b) => Math.hypot(a.x-b.x,a.y-b.y);
+let audio, volume, muted = false, nextNote = 0, beat = 0;
+const melody = [76,81,83,85,83,81,76,73,74,78,81,83,81,78,76,0,76,81,85,88,85,83,81,76,78,81,83,85,83,81,76,0];
+function unlock() {
+  const Audio = window.AudioContext || window.webkitAudioContext;
+  if (!Audio) return;
+  if (!audio) {
+    audio = new Audio();
+    volume = audio.createGain();
+    volume.gain.value = muted ? 0 : .65;
+    volume.connect(audio.destination);
+  }
+  audio.resume().catch(() => {});
+}
+function tone(note, when, length, strength, shape='triangle', end=note) {
+  if (!audio || muted) return;
+  const oscillator = audio.createOscillator();
+  const envelope = audio.createGain();
+  const hz = pitch => 440 * 2 ** ((pitch-69)/12);
+  oscillator.type = shape;
+  oscillator.frequency.setValueAtTime(hz(note), when);
+  oscillator.frequency.exponentialRampToValueAtTime(hz(end), when+length);
+  envelope.gain.setValueAtTime(.001, when);
+  envelope.gain.linearRampToValueAtTime(strength, when+.009);
+  envelope.gain.exponentialRampToValueAtTime(.001, when+length);
+  oscillator.connect(envelope).connect(volume);
+  oscillator.start(when);
+  oscillator.stop(when+length+.01);
+}
+function sound(name) {
+  if (!audio) return;
+  const now = audio.currentTime;
+  const notes = {kiss:[79,84,88],bite:[84,91],throw:[67],paper:[54,47],ouch:[64,56],clear:[72,76,79,84],retry:[65,60],start:[72,79],tick:[71]};
+  notes[name].forEach((note,i) => tone(note,now+i*.09,.13,.12,name==='paper'?'sawtooth':'triangle',name==='throw'?53:note));
+}
+function music() {
+  if (!audio || muted || mode!=='play') return;
+  const now = audio.currentTime;
+  if (nextNote < now) nextNote = now+.02;
+  while (nextNote < now+.09) {
+    const note = melody[beat%melody.length];
+    if (note) tone(note,nextNote,.17,.10);
+    if (beat%2===0) tone([45,50,42,52][Math.floor(beat/8)%4]+(beat%4===2?7:0),nextNote,.15,.13);
+    if (beat%4===3) tone(95,nextNote,.036,.012,'square',80);
+    beat++;
+    nextNote += .195;
+  }
+}
+function prepare() {
+  const map = levels[level];
+  carl = {x:40,y:125,dx:1,dy:0,walking:false};
+  pastries = map.spots.map(([x,y]) => ({x,y}));
+  enemies = map.enemies.map(([x,y]) => ({x,y}));
+  shots = [];
+  effects = [];
+  points = 0;
+  hp = 3;
+  cooldown = grace = 0;
+  remaining = map.time;
+  updateHud();
+}
+function updateHud() {
+  const map = levels[level];
+  el('street').textContent = (level+1)+'/3 · '+map.name;
+  el('score').textContent = 'Éclairs '+points+'/'+map.goal;
+  el('hearts').textContent = 'Hearts '+'♥'.repeat(hp)+'♡'.repeat(3-hp);
+  el('clock').textContent = Math.ceil(remaining)+'s';
+}
+function panel(state,title,message,button) {
+  mode = state;
+  keys.clear();
+  touchThrow=false;
+  throwPointer=null;
+  resetStick();
+  el('overlay').classList.toggle('ending',state==='credits' || state==='win');
+  el('credits').hidden = state!=='credits' && state!=='win';
+  el('credits').textContent = 'Starring Carl & Marie';
+  el('action').hidden = state==='credits';
+  el('heading').textContent = title;
+  el('message').textContent = message;
+  el('action').textContent = button;
+  el('overlay').hidden = false;
+  el('pause').disabled = state!=='paused';
+  el('pause').textContent = state==='paused'?'Resume':'Pause';
+}
+function resume() {
+  mode = 'play';
+  el('overlay').hidden = true;
+  el('pause').disabled = false;
+  el('pause').textContent = 'Pause';
+}
+function togglePause() {
+  if (mode==='play') panel('paused','Taking a breather','Carl’s éclairs can wait.','Resume');
+  else if (mode==='paused') resume();
+}
+function advance() {
+  unlock();
+  if (['play','ending','credits'].includes(mode)) return;
+  if (mode==='intro') {
+    briefing();
+    return;
+  }
+  if (mode==='paused') { resume(); return; }
+  if (mode==='clear') level++;
+  if (mode==='win') {
+    level=0;
+    prepare();
+    briefing();
+    return;
+  }
+  prepare();
+  resume();
+  sound('start');
+}
+function briefing() {
+  const controls = touchInput.matches
+    ? 'Drag the joystick to move. Tap or hold Throw.'
+    : 'Use arrows or WASD to move and Space to throw.';
+  panel('briefing','How to play',
+    'Eat enough éclairs before time runs out. '+controls+
+    ' Toss Xbox controllers at rogue job applications. Clear all three Park Slope blocks to get to Marie in Manila.',
+    'Start playing');
+}
+el('action').onclick = advance;
+el('pause').onclick = togglePause;
+el('mute').onclick = () => {
+  muted = !muted;
+  el('mute').textContent = muted?'Sound off':'Sound on';
+  el('mute').setAttribute('aria-pressed',String(muted));
+  unlock();
+  if (volume) volume.gain.value = muted?0:.65;
+};
+const gameKeys = [...movement.flat(),' '];
+addEventListener('keydown',e => {
+  const key = e.key.toLowerCase();
+  if (gameKeys.includes(key) && !(key===' ' && mode!=='play' && e.target instanceof HTMLButtonElement)) {
+    e.preventDefault();
+    if (mode==='play') keys.add(key);
+  }
+  if (!e.repeat && key==='p') togglePause();
+  if (!e.repeat && key==='enter' && !(e.target instanceof HTMLButtonElement)) advance();
+});
+addEventListener('keyup',e => keys.delete(e.key.toLowerCase()));
+addEventListener('blur',() => { if (mode==='play') togglePause(); });
+const joystick = el('joystick');
+const stick = el('stick');
+const throwButton = el('throw');
+function resetStick() {
+  stickPointer = null;
+  stickX = stickY = 0;
+  stick.style.transform = '';
+}
+function moveStick(event) {
+  if (event.pointerId !== stickPointer) return;
+  const bounds = joystick.getBoundingClientRect();
+  const x = event.clientX - bounds.left - bounds.width / 2;
+  const y = event.clientY - bounds.top - bounds.height / 2;
+  const radius = bounds.width * .27;
+  const distance = Math.hypot(x, y);
+  const scale = Math.min(1, radius / (distance || 1));
+  stick.style.transform = `translate(${x * scale}px, ${y * scale}px)`;
+  stickX = distance >= radius * .2 ? x / distance : 0;
+  stickY = distance >= radius * .2 ? y / distance : 0;
+}
+joystick.onpointerdown = event => {
+  if (mode !== 'play' || stickPointer !== null || event.button !== 0) return;
+  event.preventDefault();
+  stickPointer = event.pointerId;
+  joystick.setPointerCapture(stickPointer);
+  moveStick(event);
+};
+joystick.onpointermove = moveStick;
+joystick.onpointerup = joystick.onpointercancel = joystick.onlostpointercapture = event => {
+  if (event.pointerId === stickPointer) resetStick();
+};
+throwButton.onpointerdown = event => {
+  if (mode !== 'play' || throwPointer !== null || event.button !== 0) return;
+  event.preventDefault();
+  throwPointer = event.pointerId;
+  throwButton.setPointerCapture(throwPointer);
+  touchThrow = true;
+};
+throwButton.onpointerup = throwButton.onpointercancel = throwButton.onlostpointercapture = event => {
+  if (event.pointerId === throwPointer) throwPointer = null;
+};
+throwButton.onclick = event => {
+  if (event.detail === 0 && mode === 'play') touchThrow = true;
+};
+function puff(x,y,label,color) {
+  effects.push({x,y,label,color,life:.8});
+}
+function update(dt) {
+  const map = levels[level];
+  const oldSecond = Math.ceil(remaining);
+  remaining = Math.max(0,remaining-dt);
+  if (Math.ceil(remaining)<oldSecond && remaining<=5 && remaining>0) sound('tick');
+  grace = Math.max(0,grace-dt);
+  cooldown = Math.max(0,cooldown-dt);
+  const dx = stickX || stickY ? stickX : Number(pressed(movement[1]))-Number(pressed(movement[0]));
+  const dy = stickX || stickY ? stickY : Number(pressed(movement[3]))-Number(pressed(movement[2]));
+  const step = Math.hypot(dx,dy);
+  carl.walking = Boolean(step);
+  if (step) {
+    carl.dx = dx/step;
+    carl.dy = dy/step;
+    carl.x = clamp(carl.x+carl.dx*88*dt,12,372);
+    carl.y = clamp(carl.y+carl.dy*88*dt,94,221);
+  }
+  if ((keys.has(' ') || touchThrow || throwPointer !== null) && cooldown===0) {
+    touchThrow=false;
+    shots.push({x:carl.x+carl.dx*10,y:carl.y+carl.dy*10,dx:carl.dx,dy:carl.dy,life:.65});
+    cooldown=.30;
+    sound('throw');
+    puff(carl.x,carl.y-18,'boing!','#c6f29a');
+  }
+  pastries = pastries.filter(pastry => {
+    if (distance(pastry,carl)>11) return true;
+    points++;
+    puff(pastry.x,pastry.y,'yum!','#ffe68b');
+    sound('bite');
+    return false;
+  });
+  for (const shot of shots) {
+    shot.x += shot.dx*200*dt;
+    shot.y += shot.dy*200*dt;
+    shot.life -= dt;
+    const hit = enemies.findIndex(enemy => distance(shot,enemy)<11);
+    if (hit>=0 && shot.life>0) {
+      const [enemy] = enemies.splice(hit,1);
+      puff(enemy.x,enemy.y-14,'filed!','#fff0dd');
+      sound('paper');
+      shot.life=0;
+    }
+  }
+  shots = shots.filter(shot => shot.life>0);
+  for (const enemy of enemies) {
+    const gap = distance(enemy,carl);
+    if (gap>0) {
+      enemy.x += (carl.x-enemy.x)/gap*map.speed*dt;
+      enemy.y += (carl.y-enemy.y)/gap*map.speed*dt;
+    }
+    if (gap<10 && grace===0) {
+      hp--;
+      grace=1.8;
+      puff(carl.x,carl.y-14,'oof!','#ffaba2');
+      sound('ouch');
+    }
+  }
+  effects.forEach(effect => { effect.life-=dt; effect.y-=dt*19; });
+  effects = effects.filter(effect => effect.life>0);
+  updateHud();
+  if (points>=map.goal) {
+    sound('clear');
+    if (level===levels.length-1) {
+      mode='ending';
+      endingElapsed=0;
+      keys.clear();
+      el('pause').disabled=true;
+    }
+    else panel('clear','Éclair quota met!','One block closer to Marie. Next stop is '+levels[level+1].name+'.','Next block');
+  } else if (remaining===0 || hp===0) {
+    sound('retry');
+    panel('retry',hp===0?'Paperwork pileup':'Bakery’s closing!', 'Take another run at '+map.name+'.','Try this block again');
+  }
+}
+function rect(x,y,w,h,color) { ctx.fillStyle=color; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
+function label(text,x,y,color,size=8,align='center') {
+  ctx.font='bold '+size+'px monospace';
+  ctx.textAlign=align;
+  ctx.fillStyle=color;
+  ctx.fillText(text,Math.round(x),Math.round(y));
+}
+function tree(x,y) {
+  rect(x-3,y,6,18,'#664245');
+  rect(x-13,y-11,25,16,'#354e47');
+  rect(x-10,y-16,20,18,'#598064');
+  rect(x-6,y-17,11,11,'#84a272');
+  rect(x+5,y-9,4,3,'#afba7a');
+}
+function streetscape() {
+  const map = levels[level];
+  rect(0,0,384,232,['#dca18c','#bd8b9e','#d3a78d'][level]);
+  rect(0,75,384,50,'#c9a99a');
+  rect(0,126,384,34,'#655c6d');
+  rect(0,161,384,71,'#c4a59c');
+  rect(0,124,384,3,'#f2d0b6');
+  rect(0,159,384,3,'#f2d0b6');
+  for(let x=0;x<384;x+=24) {
+    rect(x,143,13,2,'#b39b82');
+    rect(x,89,1,35,'#ad8f86');
+    rect(x+12,162,1,70,'#ad8f86');
+  }
+  for(let i=0;i<6;i++) {
+    const x=i*64;
+    const roof=11+(i*7+level*4)%14;
+    rect(x+1,roof+3,62,73-roof,['#a65750','#97534d','#b86d54','#ad655e','#9b5355','#ac665c'][i]);
+    rect(x,roof,64,5,'#573742');
+    for(let y=roof+9;y<73;y+=6) {
+      for(let brick=x+(y%5);brick<x+60;brick+=10) rect(brick,y,6,1,'#d18b70');
+    }
+    for(const offset of [9,27,45]) {
+      rect(x+offset,roof+10,11,17,'#643f4c');
+      rect(x+offset+2,roof+12,7,12,'#f4bf79');
+      rect(x+offset+5,roof+12,1,12,'#986770');
+      rect(x+offset-1,roof+27,13,2,'#e0a185');
+    }
+    if(i===1+level) {
+      rect(x+3,52,58,27,'#433646');
+      rect(x+6,61,51,14,'#f6cb86');
+      rect(x+35,61,3,16,'#6e4e59');
+      rect(x+3,49,58,13,map.decor);
+      label(map.shop,x+32,58,'#fff0cb',6);
+      rect(x+9,70,20,2,'#9d654d');
+      for(let p=11;p<28;p+=6) rect(x+p,67,4,3,'#8c513b');
+    } else {
+      rect(x+23,54,17,24,'#61404c');
+      rect(x+26,57,11,16,'#704b5c');
+      for(let s=0;s<4;s++) rect(x+19-s,77+s*3,25+s*2,2,'#8d6c6b');
+    }
+  }
+  for(const x of [15,114,245,367]) tree(x,83);
+  for(const x of [21,184,356]) {
+    rect(x,219,17,7,'#8e5e5e');
+    rect(x+2,216,13,4,'#426450');
+    rect(x+4,215,3,2,'#efd477');
+    rect(x+10,215,3,2,'#f496a0');
+  }
+  for(let y=127;y<158;y+=6) rect(181,y,22,3,'#dfc2ae');
+}
+function person(x,y,time,person,marie=false) {
+  const bob = person.walking ? Math.round(Math.sin(time*15)) : 0;
+  const look = person.dx<-.1?-1:person.dx>.1?1:0;
+  rect(x-7,y-2,14,3,'#745562');
+  rect(x-5,y-6+bob,4,6,'#28253e');
+  rect(x+1,y-6-bob,4,6,'#28253e');
+  rect(x-6,y-15+bob,12,10,marie?'#aa557a':'#376a64');
+  rect(x-8,y-14+bob,3,7,marie?'#af794f':'#bd8256');
+  rect(x+5,y-14+bob,3,7,marie?'#af794f':'#bd8256');
+  rect(x-6,y-24+bob,12,11,marie?'#af794f':'#d69561');
+  rect(x-6,y-25+bob,12,4,'#322733');
+  rect(x-7,y-23+bob,3,5,'#322733');
+  if (marie) rect(x+5,y-23+bob,3,11,'#322733');
+  if(person.dy>=-.7) {
+    rect(x-2+look,y-20+bob,1,2,'#392937');
+    rect(x+3+look,y-20+bob,1,2,'#392937');
+  } else rect(x-5,y-22+bob,10,5,'#322733');
+}
+function pixelHeart(x,y,size) {
+  const rows = ['0110110','1111111','1111111','1111111','0111110','0011100','0001000'];
+  const unit = Math.max(1,Math.round(size/7));
+  rows.forEach((row,dy) => {
+    [...row].forEach((pixel,dx) => {
+      if(pixel==='1') rect(x+(dx-3)*unit,y+dy*unit,unit,unit,dy===1 && dx===1?'#ffd0cb':'#f07491');
+    });
+  });
+}
+function drawReunion(time) {
+  const approach = reducedMotion.matches ? 1 : clamp(endingElapsed/kissTime,0,1);
+  const ease = approach*approach*(3-2*approach);
+  const gap = 49-43*ease;
+  rect(0,0,384,232,'#eca184');
+  rect(0,75,384,90,'#7a9e92');
+  rect(0,150,384,82,'#d7bd8d');
+  for(let i=0;i<15;i++) rect((i*67)%380,86+i*4,14+i%7,1,'#acd1ae');
+  tree(51,160);
+  tree(343,177);
+  const walking = approach<1;
+  person(192-gap,177,time,{dx:1,dy:0,walking});
+  person(192+gap,177,time,{dx:-1,dy:0,walking},true);
+  if(approach===1) rect(191,159,2,1,'#b25070');
+  label('MANILA, PHILIPPINES',192,207,'#553947',10);
+
+  if(endingElapsed>=kissTime) {
+    const growth = clamp((endingElapsed-kissTime)/1.45,0,1);
+    const fade = clamp((endingElapsed-3.25)/(creditsTime-3.25),0,1);
+    const rise = reducedMotion.matches ? 1 : growth;
+    ctx.globalAlpha = 1-fade;
+    pixelHeart(192,135-87*rise,14+70*rise);
+    ctx.globalAlpha = 1;
+    ctx.globalAlpha = fade;
+    rect(0,0,384,232,'#231b2b');
+    ctx.globalAlpha = 1;
+  }
+}
+function updateEnding(dt) {
+  const before = endingElapsed;
+  endingElapsed += dt;
+  if(before<kissTime && endingElapsed>=kissTime) sound('kiss');
+  if(mode==='ending' && endingElapsed>=creditsTime) {
+    panel('credits','Carl Eats Éclairs','An arcade adventure from Park Slope to Manila.','');
+  }
+  if(mode==='credits' && endingElapsed>=ticketTime) {
+    panel('win','Together at last','Carl got his plane ticket to Manila and finally got to see Marie.','Play again');
+    el('action').focus();
+  }
+}
+function draw(time) {
+  if(mode==='ending') {
+    drawReunion(time);
+    return;
+  }
+  if(mode==='credits' || mode==='win') {
+    rect(0,0,384,232,'#231b2b');
+    return;
+  }
+  streetscape();
+  for(const pastry of pastries) {
+    const {x,y}=pastry;
+    const top=y-5+Math.round(Math.sin(time*4+x)*1.5);
+    rect(x-7,y+3,14,2,'#99777b');
+    rect(x-7,top+1,14,5,'#b56c3d');
+    rect(x-6,top,12,3,'#663c44');
+    rect(x-5,top+3,9,1,'#ffde8c');
+    rect(x+7,top-4,2,2,'#ffeba9');
+  }
+  const sprites = enemies.map(enemy => ({...enemy, paper:true}));
+  sprites.push(carl);
+  sprites.sort((a,b)=>a.y-b.y);
+  for(const sprite of sprites) {
+    const {x,y}=sprite;
+    if(sprite.paper) {
+      const foot=Math.round(Math.sin(time*10+x));
+      rect(x-7,y,14,2,'#8d737f');
+      rect(x-5,y-5+foot,2,5,'#4d3549');
+      rect(x+4,y-5-foot,2,5,'#4d3549');
+      rect(x-8,y-19,16,15,'#fff2d3');
+      rect(x+4,y-19,4,4,'#c9aa91');
+      rect(x-5,y-16,7,1,'#ac6571');
+      rect(x-5,y-13,10,1,'#b68b8b');
+      rect(x-4,y-10,2,2,'#50344c');
+      rect(x+2,y-10,2,2,'#50344c');
+      rect(x-2,y-7,4,1,'#50344c');
+    } else if(grace===0 || Math.floor(time*10)%2===0) person(x,y,time,sprite);
+  }
+  for(const {x,y} of shots) {
+    rect(x-6,y-8,12,6,'#435054');
+    rect(x-7,y-6,3,5,'#435054');
+    rect(x+4,y-6,3,5,'#435054');
+    rect(x-4,y-6,3,1,'#e0eadf');
+    rect(x+3,y-7,2,2,'#9ae177');
+  }
+  for(const effect of effects) {
+    ctx.globalAlpha=Math.min(1,effect.life*3);
+    label(effect.label,effect.x,effect.y+1,'#473249',9);
+    label(effect.label,effect.x,effect.y,effect.color,9);
+    ctx.globalAlpha=1;
+  }
+}
+function frame(now) {
+  const dt = Math.min(.05,(now-(previous??now))/1000);
+  previous=now;
+  if(mode==='play') update(dt);
+  else if(mode==='ending' || mode==='credits') updateEnding(dt);
+  draw(now/1000);
+  music();
+  requestAnimationFrame(frame);
+}
+prepare();
+panel('intro','A ticket home','Carl’s craving éclairs. Marie’s waiting in Manila.','How to play');
+requestAnimationFrame(frame);
+</script>
