@@ -17,10 +17,8 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 #dpad button[data-key="ArrowDown"] {grid-area:3 / 2}
 #dpad button:active {background:#896175}
 #dpad::after {content:'';grid-area:2 / 2;background:#302333;border-radius:8px;pointer-events:none}
-.pad-buttons {display:flex;gap:9px;align-items:end;pointer-events:auto}
-.pad-buttons button {width:48px;height:48px;padding:0;border-radius:50%;font:bold 1rem system-ui;box-shadow:0 3px #6b4350}
-.pad-buttons button span {display:block;font-size:.57rem}
-.pad-buttons button:first-child {background:#d3a39a}
+#shoot {width:62px;height:62px;padding:0;border-radius:50%;font:bold 1rem system-ui;box-shadow:0 3px #6b4350;pointer-events:auto}
+#shoot span {display:block;font-size:.66rem}
 .mobile-help {display:none}
 @media(any-pointer:coarse){.desktop-help{display:none}.mobile-help{display:inline}}
 #music {min-height:36px}
@@ -37,7 +35,7 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 </style></head><body><main>
 <header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
 <div id="frame"><canvas id="screen" width="768" height="432" aria-label="Desperados playfield"></canvas>
-<section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots or gives gas. Shift brakes.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots or gives gas. B brakes.</span></p><div><button id="action">Start run</button> <button id="copy" hidden>Copy time</button></div></section></div>
+<section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots on the train.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots on the train.</span></p><div><button id="action">Start run</button> <button id="copy" hidden>Copy time</button></div></section></div>
 <footer><span id="status">Best time —</span><div id="touch">
 <div id="dpad" role="group" aria-label="Four-way movement">
   <button data-key="ArrowUp" aria-label="Up">↑</button>
@@ -45,7 +43,7 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
   <button data-key="ArrowRight" aria-label="Right">→</button>
   <button data-key="ArrowDown" aria-label="Down">↓</button>
 </div>
-<div class="pad-buttons"><button data-key="Shift" aria-label="B, brake">B<span>Brake</span></button><button data-key="Space" aria-label="A, shoot"><b>A</b><span id="a-label">Shoot</span></button></div></div><button id="music" aria-pressed="true">Music on</button><a href="https://tennesseekaplan.github.io/Arcade/">Arcade</a></footer>
+<button id="shoot" data-key="Space" aria-label="A, shoot" hidden>A<span>Shoot</span></button></div><button id="music" aria-pressed="true">Music on</button><a href="https://tennesseekaplan.github.io/Arcade/">Arcade</a></footer>
 </main>
 <script>
 'use strict';
@@ -67,9 +65,7 @@ const box=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x*2)/2,Math.roun
 const words=(s,x,y,sz=10,c='#fff0ce')=>{ctx.fillStyle=c;ctx.font='bold '+sz+'px monospace';ctx.textAlign='center';ctx.fillText(s,x,y);};
 const poly=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();};
 function scene(next){phase=next;
- const driving=next==='drive'||next==='driveRetry';
- $('a-label').textContent=driving?'Gas':'Shoot';
- $('a-label').closest('button').setAttribute('aria-label',driving?'A, gas':'A, shoot');
+ $('shoot').hidden=next!=='train';
  touches.clear();
  sceneAt=performance.now();$('overlay').hidden=true;if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();}
 function modal(title,body,button,action){$('heading').textContent=title;$('message').textContent=body;$('action').textContent=button;$('action').onclick=action;$('overlay').hidden=false;}
@@ -177,13 +173,11 @@ function update(dt){
    if(crashTime===0)retry('drive');
    return;
   }
-  const pace=down('Shift')?.88:down('Space')?1.16:1;
   const [dx,dy]=movement();
-  const travel=dt*pace;
-  chase+=travel;
+  chase+=dt;
   carX=clamp(carX+(dx*149+(crashTime>0?crashSide*34:0))*dt,20,W-20);
   carY=clamp(carY+dy*110*dt,50,193);
-  spawn-=travel;
+  spawn-=dt;
   if(spawn<=0){
    const lane=Math.floor(random()*7);
    hazards.push({x:30+54*lane,y:-20,type:random()<.73?'cactus':'police',hit:false});
@@ -195,11 +189,11 @@ function update(dt){
    if(obstacle.type==='police'&&!obstacle.hit){
     steerPolice(obstacle,cactuses,dt);
     if(cactuses.some(plant=>plant.y<obstacle.y&&plant.y>obstacle.y-22&&Math.abs(plant.x-obstacle.x)<21)){
-     obstacle.y+=132*travel;
+     obstacle.y+=132*dt;
      continue;
     }
    }
-   obstacle.y+=(98+level*17)*(obstacle.type==='police'?.74:1)*travel;
+   obstacle.y+=(98+level*17)*(obstacle.type==='police'?.74:1)*dt;
    if(obstacle.hit||Math.abs(obstacle.x-carX)>=17||Math.abs(obstacle.y-carY)>=18)continue;
    obstacle.hit=true;
    if(crashTime>0)continue;
@@ -570,7 +564,7 @@ $('copy').onclick=async()=>{const s='Desperados — '+time(elapsed())+' ('+retri
 $('action').onclick=startRun;
 const bindings={
  ArrowLeft:'ArrowLeft',ArrowRight:'ArrowRight',ArrowUp:'ArrowUp',ArrowDown:'ArrowDown',
- KeyA:'ArrowLeft',KeyD:'ArrowRight',KeyW:'ArrowUp',KeyS:'ArrowDown',Space:'Space',ShiftLeft:'Shift',ShiftRight:'Shift'
+ KeyA:'ArrowLeft',KeyD:'ArrowRight',KeyW:'ArrowUp',KeyS:'ArrowDown',Space:'Space'
 };
 document.addEventListener('keydown',e=>{
  if(bindings[e.code]&&e.target.tagName!=='BUTTON'){
