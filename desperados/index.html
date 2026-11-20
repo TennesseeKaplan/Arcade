@@ -147,7 +147,15 @@ function person(x,y,type,walk=false,glasses=false){
  box(x-4,y-28,2,2,'#302630');box(x+3,y-28,2,2,'#302630');if(danny)box(x-2,y-25,6,2,'#422d32');
  if(glasses){box(x-7,y-29,14,4,'#261e32');box(x-6,y-29,3,1,'#bbd2ca');}
  box(x-8,y-24,16,3,scarf);box(x+4,y-22,4,4,scarf);
- box(x-7,y-39,13,7,hat);box(x-5,y-40,9,2,hat);box(x-7,y-34,13,2,'#54313d');box(x-11,y-33,22,3,hat);
+ const brim=danny?'#967168':enemy?'#82677b':'#d18a52';
+ poly([[x-7,y-34],[x-6,y-39],[x-4,y-41],[x,y-39],[x+4,y-41],[x+7,y-38],[x+8,y-34]],hat);
+ box(x-5,y-39,3,2,brim);box(x-7,y-35,15,2,'#54313d');
+ poly([[x-13,y-34],[x-5,y-33],[x+8,y-33],[x+13,y-35],[x+11,y-31],[x-11,y-30]],brim);
+ box(x-5,y-29,10,1.5,danny?'#312632':'#704835');
+ box(x-2,y-26,2,2,'#f5bf8d');
+ if(!danny&&!enemy)box(x,y-24,3,1,'#f2d4a8');
+ box(x-6,y-20,1.5,7,'#f1ca9b');box(x+4,y-19,2,5,'#9b685a');
+ box(x-5,y-13,10,1.5,'#69464a');box(x,y-13,2,1.5,'#e5b46f');
 }
 function landscape(s=0, sunset=false){
  box(0,0,W,H,sunset?'#b75f67':'#db8a6d');box(0,43,W,28,'#efab77');box(274,29,34,34,'#ffd591');
@@ -231,6 +239,12 @@ function interior(){
   box(r.x+r.w-9,r.y+2,3,r.h-3,'#634353');
  }
 }
+function passenger(x,who,glasses=false){
+ ctx.save();
+ ctx.beginPath();ctx.rect(x-16,-68,32,55);ctx.clip();
+ person(x,-4,who,false,glasses);
+ ctx.restore();
+}
 function convertible(x,y,scale=1,passengers=null){
  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
  box(-80,22,160,10,'#784551');
@@ -309,8 +323,8 @@ function drawing(){
     for(let i=0;i<4;i++){box(i*36+5,101,26,17,'#392e3b');box(i*36+8,104,20,11,'#f3ba7c');}
     box(148,90,11,52,'#302432');box(151,132,17,4,'#c38c69');
     convertible(260+depart,169,.85,()=>{
-     person(5,-9,'danny');
-     if(leap>=1)person(-24,-9,'jack');
+     passenger(5,'danny');
+     if(leap>=1)passenger(-24,'jack');
     });
     if(leap<1)person(153+leap*85,139+leap*22-Math.sin(leap*Math.PI)*50,'jack');
     for(let i=0;i<5;i++)box(181+i*13+depart*.35,186+i%3*3,8,2,'#eab77f');
@@ -324,7 +338,7 @@ function drawing(){
     const size=Math.max(.24,1-depart*.34);
     ctx.save();ctx.translate(192+depart*62,165-depart*26);ctx.scale(size,size);
     convertible(0,0,1,()=>{
-     person(-20,-9,'jack',false,true);person(4,-9,'danny',false,true);
+     passenger(-20,'jack',true);passenger(4,'danny',true);
     });
     if(age<4.6){
      words('HA HA!',0,-70,12);
