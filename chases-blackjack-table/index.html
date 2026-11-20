@@ -318,7 +318,7 @@ button.bet-chip { cursor: pointer; }
       <div class="rule-sheet"><p>Get closer to 21 than Chase without going over. Aces count as 1 or 11. Chase stands on all 17s. Blackjack pays 3:2. Ties return your bet. Double on your first two cards to double the bet and draw one last card.</p>
       <button id="reset" type="button">Reset to 500 chips</button></div>
     </details>
-    <button id="sound" class="utility" type="button" aria-pressed="true">Sound on</button>
+    <button id="sound" class="utility" type="button" aria-pressed="true">Enable sound</button>
   </header>
   <section class="game" aria-label="Blackjack table">
     <div class="lounge">
@@ -743,7 +743,7 @@ function createChaseMusic(audioContext) {
     const mix = audioContext.createGain();
     const time = audioContext.currentTime;
     mix.gain.setValueAtTime(.0001, time);
-    mix.gain.linearRampToValueAtTime(.135, time + .035);
+    mix.gain.linearRampToValueAtTime(.43, time + .035);
     mix.connect(audioContext.destination);
     const session = { mix, voices: new Set(), firstAt: time + .042, next: 0, timer: null };
     playing = session;
@@ -914,20 +914,26 @@ function createChaseMusic(audioContext) {
 
   function syncSound() {
     $('sound').setAttribute('aria-pressed', String(sound));
-    $('sound').textContent = sound ? 'Sound on' : 'Sound off';
+    $('sound').textContent = sound ? (audio?.state === 'running' ? 'Sound on' : 'Enable sound') : 'Sound off';
   }
 
   function startAudio() {
     const Context = window.AudioContext || window.webkitAudioContext;
     if (!sound || document.hidden || !Context) return;
     try {
+      if (navigator.audioSession) {
+        try { navigator.audioSession.type = 'playback'; } catch {}
+      }
       audio ??= new Context();
+      audio.onstatechange = syncSound;
       music ??= createChaseMusic(audio);
       if (audio.state === 'running') {
         music.start();
+        syncSound();
       } else {
         audio.resume().then(() => {
           if (sound && !document.hidden) music.start();
+          syncSound();
         }).catch(() => {});
       }
     } catch {}
@@ -941,7 +947,7 @@ function createChaseMusic(audioContext) {
       const t = audio.currentTime + i * .09;
       oscillator.type = 'triangle';
       oscillator.frequency.value = hz;
-      envelope.gain.setValueAtTime(.068,t);
+      envelope.gain.setValueAtTime(.11,t);
       envelope.gain.exponentialRampToValueAtTime(.001,t+.17);
       oscillator.connect(envelope).connect(audio.destination);
       oscillator.start(t);
@@ -972,12 +978,15 @@ function createChaseMusic(audioContext) {
     table.reset();bet=10;document.querySelector('.rules').open=false;render();
   });
   $('sound').addEventListener('click',()=>{
-    sound = !sound;
+    sound = !sound || audio?.state !== 'running';
     if (sound) startAudio();
     else music?.stop();
     syncSound();
     save();
   });
+  document.querySelector('.control-deck').addEventListener('touchend', event => {
+    if (event.target.closest('button:not(:disabled)')) startAudio();
+  }, { passive: true });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) music?.stop();
     else if (audio?.state === 'running' && sound) music?.start();
