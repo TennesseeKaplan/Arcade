@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Ask the floating oracle above Tallahassee a question.">
+<title>Tallahassee Magic 8-Ball</title>
+<link rel="stylesheet" href="../shared/player/game-page.css">
+<script type="module" src="../shared/player/game-page.js"></script>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#091217;color:#edf4e7}
+*{box-sizing:border-box}
+body{margin:0}
+main{width:min(100% - 2rem,58rem);margin:auto;padding:1rem 0 2rem}
+header{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.85rem}
+h1{font:700 clamp(1.8rem,5vw,3.1rem)/1 Georgia,serif;margin:0;color:#e3e9bf}
+a{color:#aee1ba;text-underline-offset:.2em}
+.scene{position:relative;overflow:hidden;border:1px solid #426755;border-radius:1.2rem 1.2rem 0 0;background:#10312d}
+.scene img{display:block;width:100%;height:auto;aspect-ratio:2 / 1;object-fit:cover;object-position:center 46%}
+.scene.sleep img{animation:drowse .6s ease-in-out both}
+@keyframes drowse{45%{transform:translateY(2%) scale(1.03);filter:brightness(.65)}}
+.console{padding:clamp(1rem,3vw,1.65rem);border:1px solid #426755;border-top:0;border-radius:0 0 1.2rem 1.2rem;background:#14251f}
+label{display:block;margin-bottom:.4rem;color:#dbe5cc}
+.ask-row{display:flex;gap:.6rem}
+input{min-width:0;flex:1;background:#071510;color:#fff;border:1px solid #63785f;border-radius:.45rem;padding:.7rem;font:inherit;-webkit-user-select:text;user-select:text}
+button{min-height:44px;background:#c2e5a8;color:#102018;border:0;border-radius:.45rem;padding:.55rem 1rem;font:700 1rem system-ui;cursor:pointer}
+:focus-visible{outline:2px solid #ffdb86;outline-offset:3px}
+#answer{font:700 clamp(1.25rem,3vw,1.85rem)/1.25 Georgia,serif;color:#f7e4b8;margin:1rem 0 0;min-height:1.3em}
+#video{margin-top:1rem}
+#video a{display:inline-block;margin-top:.7rem}
+iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
+@media(max-width:560px){main{width:min(100% - 1rem,58rem)}.scene img{aspect-ratio:4/3}header{align-items:center}}
+@media(prefers-reduced-motion:reduce){.scene.sleep img{animation:none}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Tallahassee Magic 8-Ball</h1><a href="../">Arcade</a></header>
+<div id="scene" class="scene"><img src="oracle.webp" alt="A giant mustached head floating in green mist over Tallahassee and the Florida Capitol"></div>
+<section class="console" aria-label="Ask the oracle">
+<form id="oracle">
+<label for="question">Ask the floating head a question</label>
+<div class="ask-row"><input id="question" type="text" maxlength="500" required autocomplete="off" spellcheck="false" placeholder="What should I do?"><button type="submit">Ask</button></div>
+</form>
+<p id="answer" role="status" aria-live="polite"></p>
+<div id="video" hidden>
+<button type="button" id="load-video">Play video here</button><br>
+<a href="https://www.youtube.com/watch?v=HGV3yV9q4Q4" target="_blank" rel="noopener">Watch on YouTube</a>
+</div>
+</section>
+</main>
+<script type="module">
+const answers = [
+  "I don't care man",
+  "That's cool, have you heard of Delicate Steve?",
+  "There's always a finesse to be had",
+  "Sorry, fell asleep for a second there",
+  "I know exactly what you are looking for",
+  "Sounds like a YOU problem bud",
+];
+
+const cues = [
+  [1, /\b(?:music|guitars?|bands?|concerts?|songs?|delicate steve)\b/],
+  [2, /\b(?:how do i|how can i|advice|fix|repair|finesse)\b/],
+  [4, /\b(?:where can i find|where do i find|show me|looking for|find me)\b/],
+  [5, /\b(?:drama|blame|is it my fault|whose fault|my problem)\b/],
+];
+
+let rotation = [];
+let previous;
+function nextRandom() {
+  if (!rotation.length) {
+    rotation = answers.map((_, index) => index);
+    for (let index = rotation.length - 1; index > 0; index--) {
+      const swap = Math.floor(Math.random() * (index + 1));
+      [rotation[index], rotation[swap]] = [rotation[swap], rotation[index]];
+    }
+    if (rotation.at(-1) === previous) [rotation[0], rotation[rotation.length - 1]] = [rotation.at(-1), rotation[0]];
+  }
+  return rotation.pop();
+}
+function chooseAnswer(question) {
+  const normalized = question.toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  const matches = cues.filter(([, cue]) => cue.test(normalized));
+  return matches.length && Math.random() < .6
+    ? matches[Math.floor(Math.random() * matches.length)][0]
+    : nextRandom();
+}
+
+const form = document.querySelector('#oracle');
+const input = document.querySelector('#question');
+const scene = document.querySelector('#scene');
+const answer = document.querySelector('#answer');
+const video = document.querySelector('#video');
+const loadVideo = document.querySelector('#load-video');
+
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  const question = input.value.trim();
+  if (!question) {
+    input.setCustomValidity('Enter a question first.');
+    input.reportValidity();
+    return;
+  }
+  previous = chooseAnswer(question);
+  answer.textContent = answers[previous];
+  scene.classList.remove('sleep');
+  if (previous === 3) {
+    void scene.offsetWidth;
+    scene.classList.add('sleep');
+  }
+  video.querySelector('iframe')?.remove();
+  video.hidden = previous !== 4;
+  loadVideo.hidden = false;
+});
+input.addEventListener('input', () => input.setCustomValidity(''));
+
+loadVideo.addEventListener('click', () => {
+  const frame = document.createElement('iframe');
+  frame.src = 'https://www.youtube-nocookie.com/embed/HGV3yV9q4Q4?autoplay=1';
+  frame.title = 'The oracle’s YouTube recommendation';
+  frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+  frame.allowFullscreen = true;
+  video.prepend(frame);
+  loadVideo.hidden = true;
+});
+</script>
+</body>
+</html>
