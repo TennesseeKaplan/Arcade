@@ -4,6 +4,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Carl Eats Éclairs</title>
 <style>
+/* Keep rapid taps and holds in the game while leaving page zoom available. */
+#stage,
+#touch,
+header button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
 *{box-sizing:border-box}body{margin:0;background:#231b2b;color:#fff1ce;font:600 15px system-ui,sans-serif}main{width:min(960px,96vw);margin:24px auto}header,footer,#hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font:700 clamp(26px,5vw,52px) Georgia;margin:4px 0 14px;color:#ffd687}button{background:#ffd687;color:#301c2b;border:0;border-radius:6px;padding:9px 14px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid white;outline-offset:3px}#hud{background:#3c2a40;padding:10px 14px;border-radius:8px 8px 0 0;font-variant-numeric:tabular-nums}#stage{position:relative;background:#342238}canvas{display:block;width:100%;image-rendering:pixelated}#overlay{position:absolute;inset:0;display:grid;align-items:center;justify-items:center;background:#24182c88;padding:10px}#overlay[hidden]{display:none}article{width:min(460px,100%);text-align:center;background:#34243af5;border:2px solid #e5a662;padding:clamp(8px,3vw,24px);border-radius:10px}h2{font:700 clamp(19px,4vw,38px) Georgia;margin:0;color:#ffdb91}p{margin:8px 0 12px}#credits[hidden]{display:none}#credits{color:#ead6dc}#overlay.ending{background:#231b2b}#overlay.ending article{animation:appear .55s ease-out}@keyframes appear{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){#overlay.ending article{animation:none}}footer{padding:10px 0;color:#ead6dc}#touch, #touch-help { display: none; }
 #joystick {
   width: 108px; aspect-ratio: 1; position: relative; display: grid; place-items: center;

@@ -2,6 +2,16 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Desperados — Jack and Danny</title>
 <style>
+/* Keep rapid taps and holds in the game while leaving page zoom available. */
+#frame,
+#touch,
+#music {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
 *{box-sizing:border-box}body{margin:0;background:#201722;color:#fff0ce;font:16px system-ui}main{max-width:860px;margin:auto;padding:12px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}h1{margin:0;color:#ffcb80;font:900 clamp(2rem,7vw,4rem)/.95 Georgia}header p{margin:.4rem 0 0}#clock{font:800 1.1rem monospace;color:#ffcb80}
 canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:#3a2933}#frame{position:relative;border:2px solid #957050}
