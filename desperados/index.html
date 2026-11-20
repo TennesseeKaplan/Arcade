@@ -26,7 +26,8 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
   #touch button {pointer-events:auto;min-height:36px}
 
 }
-</style></head><body><main>
+</style><link rel="stylesheet" href="../shared/player/game-page.css">
+</head><body><main>
 <header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
 <div id="frame" class="arcade-touch-surface"><canvas id="screen" width="768" height="432" aria-label="Desperados playfield"></canvas>
 <section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots on the train.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots on the train.</span></p><div><button id="action">Start run</button> <button id="copy" hidden>Copy time</button></div></section></div>
