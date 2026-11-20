@@ -616,7 +616,7 @@ function showGymPayout() {
 }
 function greet() {
   patientArrives();
-  say('Patient ' + (state.patients + 1) + ' of ' + patientLimit + ' · “I’m a different guy btw.”');
+  say('Patient ' + (state.patients + 1) + ' of ' + patientLimit);
 }
 
 let audio;
@@ -1850,12 +1850,7 @@ function draw(t) {
       if (p === 'exchange') {
         const elapsed = state.elapsed;
         if (!dialogue && elapsed < 2) caption('Click!', 492, 121, 16);
-        if (elapsed >= 5.5 && state.gold > 0) {
-          for (let i = 0; i < 9; i++) {
-            const flight = Math.min(2.4, Math.max(0, elapsed - 5.5 - i * .1));
-            box(485 - flight * (34 + i * 28), 157 + flight * (i - 1) * 16, 24, 11, '#8fe68e', 0);
-          }
-        }
+        if (elapsed >= 5.5 && state.gold > 0) drawCashBag(elapsed - 5.5);
       }
     }
   }
@@ -2156,6 +2151,26 @@ function drawExitSign(destination) {
     [right - 12, top + 17], [right - 22, top + 24], [right - 22, top + 19], [right - 32, top + 19]], '#e5d5ad');
   ctx.restore();
 }
+function drawCashBag(elapsed) {
+  const progress = motion.matches ? 1 : Math.min(1, elapsed / .72);
+  const travel = 1 - (1 - progress) ** 2;
+  ctx.save();
+  ctx.translate(496 + (402 - 496) * travel,
+    165 + (253 - 165) * travel - 18 * Math.sin(Math.PI * travel));
+  ctx.rotate(-.4 * Math.sin(Math.PI * travel));
+  const scale = .46 + .54 * travel;
+  ctx.scale(scale, scale);
+  flat([[-7, -14], [7, -14], [4, -7], [8, -4], [15, 5], [18, 16],
+    [14, 23], [6, 26], [-9, 26], [-17, 22], [-19, 14], [-15, 4], [-6, -5], [-4, -7]], '#513a31');
+  flat([[-5, -12], [5, -12], [2, -6], [7, -3], [13, 5], [15, 15],
+    [12, 20], [6, 23], [-8, 23], [-14, 20], [-16, 14], [-12, 5], [-5, -3]], '#c7a56c');
+  flat([[-4, -10], [1, -11], [-1, -5], [-8, 3], [-12, 15], [-14, 15],
+    [-12, 6], [-6, -3]], '#ecd18e');
+  box(-6, -7, 12, 3, '#825131', 1);
+  caption('$', 0, 17, 18, '#4c5d39');
+  ctx.restore();
+}
+
 function drawCashTerminal() {
   ctx.fillStyle = '#141e20';
   ctx.fillRect(0, 0, 640, 380);
