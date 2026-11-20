@@ -6,402 +6,338 @@
 <title>Kyle - A Derm’s Life</title>
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; background: #1d1729; color: #fff0d3; font: 16px system-ui, sans-serif; }
-  main { width: min(100%, 68rem); margin: auto; padding: 12px; }
-  .beta-banner { display: flex; align-items: center; gap: .65rem; background: #ffce76; color: #26172b; padding: .2rem .65rem; border-radius: 6px; font-size: .8rem; }
-  .beta-banner strong { letter-spacing: .1em; }
-  header { display: flex; align-items: center; gap: 12px; justify-content: space-between; margin-bottom: 8px; }
-  h1 { margin: 0; font-size: clamp(1rem, 3vw, 1.8rem); }
-  #clock { text-align: right; min-width: 7ch; font-weight: 900; font-variant-numeric: tabular-nums; }
-  #clock.glow { color: #ffe986; text-shadow: 0 0 12px #ffb34e; }
-  .game { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(15rem, 1fr); gap: 10px; align-items: start; }
-  canvas { width: 100%; height: auto; max-height: calc(100dvh - 86px); object-fit: contain; background: #2e243c; border-radius: 12px; }
-  .panel { background: #32273f; padding: 12px; border: 1px solid #66516d; border-radius: 12px; }
-  h2, p { margin: 0 0 8px; }
-  h2 { font-size: 1.2rem; }
-  .stats, #status { color: #dac9df; }
-  #status { min-height: 1.4em; }
   [hidden] { display: none !important; }
-  #movement { display: grid; grid-template-columns: repeat(3, 44px); gap: 3px; width: max-content; margin-top: 7px; touch-action: none; user-select: none; }
-  #movement button { padding: 0; background: #594b69; color: #fff0d3; }
-  #movement button:active { background: #877498; }
-  #movement [data-move="up"] { grid-column: 2; }
-  #movement [data-move="left"] { grid-column: 1; }
-  @media (not (any-pointer: coarse)) { #movement { display: none; } }
-  #actions { display: flex; flex-wrap: wrap; gap: 6px; }
-  button, input { min-height: 44px; font: inherit; border-radius: 8px; padding: 6px 10px; }
-  button { border: 0; background: #ffce76; color: #26172b; font-weight: 800; touch-action: manipulation; cursor: pointer; }
-  button[aria-pressed="true"] { background: #a2e3c8; }
-  button:disabled { opacity: .5; cursor: default; }
-  input { width: 100%; border: 2px solid #b391ad; }
-  #meter { height: 18px; margin: 0 0 10px; position: relative; background: #1d1729; border-radius: 8px; overflow: hidden; }
-  #zone, #needle { position: absolute; top: 0; height: 100%; }
-  #zone { background: #73d4ad; }
-  #needle { width: 4px; background: white; transform: translateX(-50%); }
-  #exchange { color: #ffe986; font-weight: 800; }
-  @media (orientation: portrait) { .game { grid-template-columns: 1fr; } }
-  @media (max-height: 420px) and (orientation: landscape) {
-    main { padding: 6px; }
-    .panel { padding: 7px; font-size: .88rem; }
-    p, h2 { margin-bottom: 5px; }
+  :root {
+    color-scheme: dark;
+    --ink: #f6ead3;
+    --muted: #cec9b6;
+    --gold: #f1cf91;
+    --frame: #19201f;
+    --edge: #545a4d;
+    --control: #283733;
+    --display-height: max(142px, calc(100dvh - 120px));
+    font: 16px/1.4 system-ui, sans-serif;
+    background: #0d1212;
   }
-  @media (max-height: 280px) {
-    main.typing canvas { display: none; }
-    main.typing .game { grid-template-columns: 1fr; }
-  }
-  main.in-mine .game { position: relative; display: block; }
-  main.in-mine .panel { position: absolute; inset: auto 0 0; background: #302641ed; padding: 6px 10px; }
-  main.in-mine canvas { display: block; margin: auto; max-height: calc(100dvh - 85px); }
-  main.in-mine #heading { display: none; }
-  main.in-mine #movement { position: absolute; right: 8px; bottom: 8px; }
-  main.in-mine #stick { display: none; }
-  @media (any-pointer: coarse) { main.in-mine #actions { padding-right: 103px; } }
-  .top-hud { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-  #cash { white-space: nowrap; font-weight: 800; color: #adf0ad; }
-  #sound { min-height: 30px; font-size: .72rem; }
-  #clock { display: inline-block; transition: transform .2s; transform-origin: right; }
-  #clock.glow { transform: scale(1.28); }
-  .scene-frame { position: relative; min-width: 0; }
-  #title-scroll { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: .6rem; text-align: center; padding: 1rem; background: #211a32ed; border-radius: 12px; }
-  #title-scroll p { max-width: 32ch; }
-  #title-scroll h2 { color: #ffce76; font-size: clamp(1.1rem, 3vw, 2rem); }
-  #movement { display: flex; align-items: center; gap: 9px; width: auto; }
-  #stick { width: 74px; height: 74px; display: grid; place-items: center; border-radius: 50%; background: #483b5b; touch-action: none; user-select: none; }
-  #knob { width: 34px; height: 34px; border-radius: 50%; background: #8e7da0; pointer-events: none; }
-  #movement .ab { width: 44px; border-radius: 50%; background: #ffce76; color: #26172b; }
-  @media (not (any-pointer: coarse)) { #movement { display: none; } }
-  @media (orientation: landscape) and (max-height: 390px) {
-    #stick { width: 59px; height: 59px; }
-    #knob { width: 29px; height: 29px; }
-    .beta-banner { margin-bottom: 4px; }
-  }
-  @media (prefers-reduced-motion: reduce) { #clock { transition: none; } }
-  body { background: #151a1b; color: #fbecd2; }
-  main { max-width: 960px; }
-  .beta-banner { background: #30342b; color: #e8d7aa; border: 1px solid #645d46; border-radius: 2px; }
-  .game { grid-template-columns: 1fr; gap: 3px; }
-  .scene-frame { position: relative; background: #10161b; border: 2px solid #887953; box-shadow: 0 0 0 3px #252b24; }
-  canvas, main.in-mine canvas { display: block; margin: auto; border-radius: 0; max-height: calc(100dvh - 208px); image-rendering: pixelated; }
-  .panel, main.in-mine .panel { position: relative; inset: auto; background: #202b2a; border: 1px solid #78816a; border-radius: 0; padding: 7px 11px; min-height: 100px; }
-  #heading { color: #f0cf90; font: 800 1.05rem Georgia, serif; }
-  #status, .stats { color: #e0dcc2; }
-  #status { min-height: 0; }
-  button, .panel button { color: #f7ead1; background: #394540; border: 1px solid #778275; border-radius: 2px; }
-  button[aria-pressed="true"], #actions button:last-child:not([aria-pressed]), #continue { background: #d5b575; color: #28251d; }
-  #meter { background: #151d20; border: 1px solid #927e59; border-radius: 2px; }
-  #needle { background: #fff3bf; box-shadow: 0 0 4px #ea9a47; }
-  #zone { background: #739a5d; }
-  #dialogue { position: absolute; left: 5%; right: 5%; bottom: 5%; z-index: 2; background: #172326f5; border: 2px solid #bda373; padding: 8px 12px; box-shadow: 0 4px #121b1e; }
-  #dialogue strong { color: #e6c789; }
-  #dialogue p { margin: 4px 0; }
-  #dialogue button { min-height: 40px; }
-  main.in-mine #stick { display: grid; }
-  main.in-mine #movement { position: static; }
-  @media (any-pointer: coarse) and (orientation: landscape) {
-    .game, main.in-mine .game { display: grid; grid-template-columns: minmax(0, 1fr) minmax(13rem, 32%); gap: 5px; }
-    canvas, main.in-mine canvas { max-height: calc(100dvh - 79px); }
-    .panel, main.in-mine .panel { font-size: .85rem; padding: 6px; }
-    main.in-mine #actions { padding-right: 0; }
-    #movement, main.in-mine #movement { position: static; }
-  }
-  @media (orientation: portrait) { canvas, main.in-mine canvas { max-height: none; } }
-
-  /* The display and the lower deck use distinct, stable tracks. */
-  .game, main.in-mine .game {
-    display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(15rem, 5fr);
-    grid-template-rows: auto minmax(7.25rem, auto);
-    grid-template-areas: "scene scene" "dialogue controls";
-    align-items: stretch;
-    gap: 6px;
-  }
-  .scene-frame {
-    grid-area: scene;
-    display: grid;
-    place-items: center;
+  body { margin: 0; padding: 6px; color: var(--ink); }
+  main { margin: 0 auto; min-height: calc(100dvh - 12px); display: grid; place-items: center; }
+  .game {
+    width: min(100%, 1200px, calc(var(--display-height) * 1.6842));
     min-width: 0;
-    background: #111715;
-    border: 2px solid #756952;
-    border-radius: 5px 5px 13px 5px;
-    box-shadow: inset 0 0 0 4px #252c27, 0 1px 0 #090d0a;
-    padding: 5px 8px;
+    background: var(--frame);
+    border: 1px solid var(--edge);
+    border-radius: 9px;
+    overflow: hidden;
+    box-shadow: 0 12px 44px #0009;
   }
-  .scene-frame canvas, main.in-mine .scene-frame canvas {
-    display: block;
-    width: min(100%, max(16rem, calc((100dvh - 253px) * 1.6842)));
-    height: auto;
-    max-height: none;
-    aspect-ratio: 640 / 380;
-  }
-  .panel, main.in-mine .panel {
-    grid-area: controls;
-    min-width: 0;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 3px 9px;
-    align-content: center;
-    padding: 6px 9px;
-  }
-  .panel > :not(#movement):not(.console-switches) { grid-column: 1 / -1; }
-  .panel #heading, .panel #status, .panel .stats, .panel #exchange { margin: 0; }
-  .panel #meter { margin: 0 0 2px; }
-  .panel #actions { gap: 4px; }
-  .console-switches {
-    grid-column: 1 / -1;
+  .scene-frame { position: relative; min-width: 0; background: #090e10; isolation: isolate; }
+  #scene { display: block; width: 100%; height: auto; aspect-ratio: 640 / 380; }
+  h1, h2, p { margin: 0; }
+  .field-hud {
+    position: absolute;
+    z-index: 2;
+    inset: 0 0 auto;
     display: flex;
-    justify-content: flex-end;
-    gap: 6px;
+    justify-content: space-between;
+    align-items: start;
+    gap: 10px;
+    padding: clamp(5px, 1.3vw, 15px);
+    background: linear-gradient(#0a1114b8, #0a111400);
+    color: #f6ead7;
+    pointer-events: none;
   }
-  .console-readout { align-self: center; margin-right: auto; min-width: 0; }
-  .console-switches #sound { align-self: center; min-height: 33px; }
-  main.in-mine #heading { display: block; }
+  .field-hud h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .beta-banner, .top-hud {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 25px;
+    padding: 3px 7px;
+    background: #101a1bdc;
+    border: 1px solid #728176;
+    border-radius: 4px;
+    font: 700 clamp(.66rem, 1.4vw, .86rem) / 1.25 system-ui, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  .beta-banner strong { color: var(--gold); font-size: .78em; letter-spacing: .13em; }
+  #cash { color: #c5e5a9; }
+  #clock { border-left: 1px solid #6b796e; padding-left: 7px; }
+  #clock.glow { color: #ffe58b; text-shadow: 0 0 7px #e8ad5c; }
+  .scene-frame:has(#title-scroll:not([hidden])) .field-hud { display: none; }
+  .panel {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(8rem, .75fr) minmax(9rem, 1.3fr) auto;
+    grid-template-areas: "readout status actions" "meter meter meter";
+    gap: 3px 11px;
+    align-items: center;
+    padding: 6px 10px;
+    min-height: 55px;
+    background: linear-gradient(135deg, #263431, #1e2927 68%);
+    border-top: 1px solid #5a6456;
+  }
+  .console-switches { grid-area: readout; display: flex; gap: 6px; align-items: center; min-width: 0; }
+  .console-readout { min-width: 0; flex: 1; }
+  #heading { font: 700 .94rem/1.15 Georgia, serif; color: var(--gold); }
+  #stats { font-size: .76rem; color: var(--muted); line-height: 1.25; }
+  #status { grid-area: status; color: #eee7d1; font-size: .84rem; line-height: 1.22; overflow-wrap: anywhere; }
+  #actions { grid-area: actions; display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px; min-width: 0; }
+  #actions:empty { display: none; }
+  #actions > a {
+    display: inline-flex;
+    align-items: center;
+    color: #e9dcbe;
+    padding: 4px 7px;
+    text-underline-offset: 3px;
+  }
+  button {
+    background: var(--control);
+    color: var(--ink);
+    border: 1px solid #69756b;
+    border-radius: 4px;
+    padding: 6px 9px;
+    min-height: 36px;
+    font: 700 .83rem/1.15 system-ui, sans-serif;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  button:not(:disabled):hover { background: #475a50; }
+  button:focus-visible { outline: 2px solid #fff4cb; outline-offset: 2px; }
+  button:disabled { opacity: .56; cursor: not-allowed; }
+  button[aria-pressed=true] { border-color: #e6c57c; color: #ffe2a5; }
+  #start, #continue, #actions .swing-action, #affirmation-button:not(:disabled) {
+    color: #272415;
+    background: #e2c487;
+    border-color: #fae1ad;
+  }
+  #sound { padding: 4px 6px; min-height: 28px; font-size: .7rem; }
+  #actions .heal-action { background: #325741; border-color: #8cb780; color: #effadf; }
   .game:has(#title-scroll[hidden]) #start { display: none; }
-  .game:has(#title-scroll:not([hidden])) .panel > :not(.console-switches) { display: none !important; }
+  .game:has(#title-scroll:not([hidden])) .panel { grid-template-columns: 1fr; grid-template-areas: "readout"; }
   .game:has(#title-scroll:not([hidden])) .console-switches { justify-content: center; }
   .game:has(#title-scroll:not([hidden])) .console-readout,
-  .game:has(#title-scroll:not([hidden])) .dialogue-dock #status,
-  .dialogue-dock:has(#dialogue:not([hidden])) #status { display: none; }
-  .dialogue-dock > #status { padding: 8px 10px; margin: 0; font-size: .86rem; }
-  .dialogue-dock {
-    grid-area: dialogue;
-    min-width: 0;
-    min-height: 6.5rem;
-    background: #17211e;
-    border: 1px solid #475644;
+  .game:has(#title-scroll:not([hidden])) .panel > :not(.console-switches) { display: none; }
+  #meter {
+    grid-area: meter;
+    width: min(100%, 680px);
+    height: 17px;
+    justify-self: center;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #a39369;
     border-radius: 3px;
-    box-shadow: inset 0 1px 5px #0c1212;
+    background: #111b1e;
   }
+  #zone, #needle { position: absolute; top: 0; height: 100%; }
+  #zone { background: linear-gradient(#8bb77d, #64935e); }
+  #needle { width: 4px; transform: translateX(-50%); background: #fff3bf; box-shadow: 0 0 4px #f5b44d; }
+  #exchange { grid-area: meter; color: var(--gold); font-weight: 700; text-align: center; }
   #dialogue {
-    position: static;
-    height: 100%;
-    padding: 7px 9px;
-    border: 1px solid #bda373;
-    background: #172326;
-    box-shadow: none;
+    position: absolute;
+    z-index: 5;
+    left: 50%;
+    bottom: clamp(4px, 1vw, 13px);
+    width: min(calc(100% - 16px), 650px);
+    max-height: 44%;
+    transform: translateX(-50%);
     display: grid;
-    grid-template: "speaker button" auto "speech button" 1fr / minmax(0, 1fr) auto;
-    column-gap: 8px;
+    grid-template: "name confirm" auto "speech confirm" 1fr / minmax(0, 1fr) auto;
     align-items: center;
+    gap: 2px 9px;
     overflow: auto;
-    scrollbar-width: thin;
+    padding: 6px 8px;
+    color: var(--ink);
+    background: #111d20f5;
+    border: 1px solid #8b9d91;
+    border-left: 3px solid #dcb97e;
+    border-radius: 3px;
+    box-shadow: 0 3px 20px #02070b80;
+    animation: dialogue-appear .18s ease-out;
   }
-  #dialogue #speaker { grid-area: speaker; font: 800 .93rem Georgia, serif; }
-  #dialogue #speech {
-    grid-area: speech;
-    margin: 3px 0 0;
-    font-size: .9rem;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
+  #speaker { grid-area: name; color: var(--gold); font: 700 .84rem/1.1 Georgia, serif; }
+  #speech { grid-area: speech; font-size: .82rem; line-height: 1.2; }
+  #continue { grid-area: confirm; max-width: 7.5rem; }
+  .game:has(#dialogue:not([hidden])) #status { opacity: .57; }
+  @keyframes dialogue-appear { from { opacity: 0; } to { opacity: 1; } }
+  #zone-intro {
+    position: absolute;
+    z-index: 4;
+    inset: auto auto clamp(8px, 2.5vw, 26px) clamp(8px, 2.5vw, 26px);
+    width: fit-content;
+    max-width: min(64%, 29rem);
+    padding: 6px 11px;
+    color: #f5efdb;
+    background: linear-gradient(90deg, #111c20f2, #111c20c7 78%, #111c2008);
+    border-left: 3px solid #f0cc8d;
+    text-shadow: 0 1px 3px #06090a;
+    pointer-events: none;
+    animation: zone-slide .33s ease-out both;
   }
-  #dialogue #continue {
-    grid-area: button;
-    min-height: 44px;
-    padding: 5px 8px;
-    max-width: 7.5rem;
-    justify-self: end;
-    font-size: .79rem;
-    line-height: 1.15;
+  #zone-intro .zone-kicker, #zone-intro small {
+    display: block;
+    color: #f0cc8d;
+    font-size: clamp(.6rem, 1.4vw, .84rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: .15em;
+    text-transform: uppercase;
   }
+  #zone-intro .zone-title, #zone-intro h2 {
+    margin: 1px 0;
+    font: 800 clamp(1.05rem, 4vw, 2.25rem)/1.04 Georgia, serif;
+  }
+  #zone-intro .zone-detail, #zone-intro p {
+    max-width: 38ch;
+    color: #f1e7cf;
+    font-size: clamp(.68rem, 1.6vw, .9rem);
+    line-height: 1.18;
+    white-space: pre-line;
+  }
+  #zone-intro .zone-continue, #zone-intro button {
+    pointer-events: auto;
+    margin-top: 5px;
+    min-height: 34px;
+    color: #2a2317;
+    background: #e2c487;
+    border-color: #fae1ad;
+  }
+  .scene-frame:has(#dialogue:not([hidden])) #zone-intro:not(:has(button:not([hidden]))) { visibility: hidden; }
+  @keyframes zone-slide { from { opacity: 0; transform: translateX(-7px); } to { opacity: 1; transform: translateX(0); } }
+  #title-scroll {
+    position: absolute;
+    z-index: 6;
+    inset: 0;
+    display: grid;
+    align-content: safe center;
+    justify-items: center;
+    padding: clamp(7px, 2vw, 22px);
+    background: radial-gradient(ellipse at 48% 27%, #2d3b30f5, #121b20f5 75%);
+    overflow: auto;
+    text-align: center;
+  }
+  .day-overview { width: min(100%, 760px); }
+  #title-scroll .title-brand {
+    margin: 0 0 .3rem;
+    color: #adbdab;
+    font: 800 clamp(.62rem, 1.35vw, .84rem)/1.1 system-ui, sans-serif;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  #title-scroll h2 { margin: 0 0 .35rem; color: #f8d8a1; font: 800 clamp(1.13rem, 4vw, 2.45rem)/1.05 Georgia, serif; }
+  #title-scroll p { margin: 0 auto .7rem; max-width: 65ch; color: #e4dfc6; font-size: clamp(.73rem, 1.7vw, 1rem); line-height: 1.25; }
+  .day-stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 0; margin: 0; list-style: none; text-align: left; }
+  .day-stages li { display: grid; align-content: start; gap: .23rem; padding: .5rem; border: 1px solid #66725a; border-top-color: #9c895e; background: #23342d; font-size: clamp(.73rem, 1.54vw, .93rem); line-height: 1.21; }
+  .day-stages strong { color: #ffe0a9; font: 700 1.07em/1.1 Georgia, serif; }
+  #movement { display: none; }
+  #affirmation-button { min-height: 42px; width: 100%; letter-spacing: .02em; }
   @media (any-pointer: coarse) {
-    body { background: #23232b; }
-    main {
-      border: 1px solid #84838f;
-      border-radius: 12px 12px 28px 12px;
-      background: linear-gradient(145deg, #aaaab2, #848692);
-      box-shadow: 0 3px 0 #4e515a, inset 0 2px #c5c4cc;
-      padding: 5px 8px 8px;
+    :root { --display-height: max(126px, calc(100dvh - 119px)); }
+    .game { width: min(100%, 900px); border-radius: 11px 11px 24px 11px; }
+    .scene-frame { width: min(100%, calc(var(--display-height) * 1.6842)); margin: auto; }
+    .panel { min-height: 72px; gap: 3px 7px; padding: 4px 6px; grid-template-columns: minmax(6rem, .65fr) 1fr; grid-template-areas: "readout status" "actions actions" "meter meter"; }
+    .panel:has(#movement:not([hidden])) { padding-left: 57px; padding-right: 101px; }
+    .console-switches { gap: 3px; }
+    #heading { font-size: .79rem; }
+    #stats, #status { font-size: .69rem; }
+    #actions { justify-content: start; }
+    #actions button { min-height: 35px; padding: 4px 5px; font-size: .74rem; }
+    #dialogue { max-height: 52%; }
+    #speech { font-size: .74rem; }
+    #continue { min-height: 44px; max-width: 5.8rem; font-size: .72rem; }
+    #movement {
+      display: flex;
+      position: absolute;
+      inset: 0 4px;
+      gap: 3px;
+      align-items: center;
+      pointer-events: none;
     }
-    .beta-banner {
-      color: #2a2950;
-      background: transparent;
-      border: 0;
-      padding: 0;
-      margin: 0 0 2px;
-      font-size: .72rem;
+    #stick {
+      flex: 0 0 47px;
+      width: 47px;
+      height: 47px;
+      margin-right: auto;
+      display: grid;
+      place-items: center;
+      border: 1px solid #708076;
+      border-radius: 50%;
+      background: #152522;
+      box-shadow: inset 0 2px 5px #061713;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      pointer-events: auto;
     }
-    header { margin-bottom: 3px; }
-    header h1 { font-size: clamp(.94rem, 2.5vw, 1.35rem); color: #211f40; }
-    #cash { color: #202943; }
-    #clock { color: #252441; font-size: .9rem; }
-    #clock.glow { color: #5d344f; text-shadow: 0 0 8px #f8e3a5; }
-    .scene-frame {
-      border: 2px solid #535266;
-      border-radius: 8px 8px 16px 8px;
-      padding: 4px;
-      background: #292b3a;
-      box-shadow: inset 0 0 0 3px #343647;
-    }
-    .panel, main.in-mine .panel {
-      background: #797c8d;
-      border-color: #606273;
-      border-radius: 5px 5px 16px 5px;
-      box-shadow: inset 0 1px #a9abb4;
-      padding: 4px 6px;
-    }
-    .panel #heading, .panel #status, .panel .stats, .panel #exchange { color: #18182b; }
-    .panel #heading { font: 800 .82rem Georgia, serif; }
-    .panel #status, .panel .stats, .panel #exchange { font-size: .76rem; line-height: 1.2; }
-    .panel button { min-height: 44px; padding: 4px 6px; font-size: .78rem; }
-    .panel #actions button { flex: 1 1 0; min-width: 0; }
-    .panel #sound { min-height: 30px; color: #eeedf7; background: #474959; }
-    #movement, main.in-mine #movement {
-      grid-column: 2;
-      grid-row: 1 / span 5;
-      position: static;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-      gap: 4px;
-      align-content: center;
-      width: min-content;
-      min-width: 100px;
-      margin: 0;
-      padding: 2px;
-    }
+    #knob { width: 23px; height: 23px; border-radius: 50%; background: #879588; box-shadow: inset 0 1px #b5c1aa, 0 1px 3px #071410; pointer-events: none; }
     #movement .ab {
       width: 44px;
       min-height: 44px;
-      color: #f9e6ef;
-      background: #782953;
-      border: 1px solid #522343;
-      box-shadow: 0 2px #382339, inset 0 1px #ad5787;
-      font-size: .95rem;
-    }
-    #movement #stick {
-      width: 48px;
-      height: 48px;
-      margin: 0 24px 2px;
-      background: #454653;
-      border: 1px solid #363745;
-      box-shadow: inset 0 2px 5px #2f303d;
-    }
-    @media (min-width: 680px) {
-      #movement, main.in-mine #movement { flex-wrap: nowrap; width: max-content; }
-      #movement #stick { margin: 0 3px 0 0; }
-    }
-    #movement #knob {
-      width: 24px;
-      height: 24px;
-      background: #686a7c;
-      box-shadow: 0 1px 2px #2a2a37, inset 0 1px #9395a6;
-    }
-    .panel:has(#movement:not([hidden])) > :not(#movement) {
-      grid-column: 1;
+      border-radius: 50%;
+      color: #fbe7da;
+      background: #703f49;
+      border-color: #be8388;
+      box-shadow: 0 2px #3a252b;
+      padding: 0;
+      pointer-events: auto;
     }
   }
   @media (orientation: landscape) and (max-height: 460px) {
-    .game, main.in-mine .game {
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      grid-template-rows: auto minmax(5.7rem, auto);
-      gap: 3px;
-    }
-    .dialogue-dock { min-height: 5.7rem; }
-    .scene-frame canvas, main.in-mine .scene-frame canvas {
-      width: min(100%, max(13rem, calc((100dvh - 202px) * 1.6842)));
-    }
-    #dialogue { padding: 4px 6px; }
-    #dialogue #speaker { font-size: .82rem; }
-    #dialogue #speech, .dialogue-dock > #status { font-size: .8rem; }
-    #dialogue #continue { max-width: 5rem; font-size: .72rem; }
-    #title-scroll { gap: 3px; padding: 6px; }
-    #title-scroll p { font-size: .85rem; }
-  }
-  @media (orientation: portrait) and (max-width: 47rem) {
-    .game, main.in-mine .game {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto minmax(6.5rem, auto) auto;
-      grid-template-areas: "scene" "dialogue" "controls";
-    }
-    .scene-frame canvas, main.in-mine .scene-frame canvas { width: 100%; }
-  }
-
-  #title-scroll {
-    gap: 0;
-    padding: clamp(7px, 2vw, 22px);
-    border-radius: 4px;
-    background: linear-gradient(147deg, #162622f7 12%, #101b1cf2);
-    overflow: auto;
-    align-content: safe center;
-  }
-  .day-overview { width: min(100%, 760px); margin: auto; }
-  #title-scroll h2 {
-    margin: 0 0 .3rem;
-    color: #f8d8a1;
-    font: 800 clamp(1rem, 4vw, 2.4rem)/1.04 Georgia, serif;
-  }
-  #title-scroll p {
-    margin: 0 auto .75rem;
-    max-width: 65ch;
-    color: #e4dfc6;
-    font-size: clamp(.75rem, 1.7vw, 1rem);
-    line-height: 1.26;
-  }
-  .day-stages {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    padding: 0;
-    margin: 0;
-    list-style: none;
-    text-align: left;
-  }
-  .day-stages li {
-    display: flex;
-    flex-direction: column;
-    gap: .25rem;
-    padding: .52rem;
-    border: 1px solid #66725a;
-    border-top-color: #9c895e;
-    background: #23342d;
-    color: #e7dfc5;
-    font-size: clamp(.74rem, 1.54vw, .93rem);
-    line-height: 1.21;
-  }
-  .day-stages strong {
-    color: #ffe0a9;
-    font: 700 1.07em/1.1 Georgia, serif;
-  }
-  .dialogue-dock { border-color: #657053; background: #172421; }
-  .dialogue-dock > #status { color: #f1ead3; line-height: 1.3; }
-  #dialogue {
-    background: linear-gradient(155deg, #25332c, #1a2927);
-    box-shadow: inset 0 1px #6b735c;
-  }
-  #dialogue #speaker { color: #ffdc9b; }
-  button:focus-visible { outline: 2px solid #fff4cb; outline-offset: 2px; }
-  .panel #actions .swing-action { background: #d9b578; border-color: #edcb8b; color: #251e1a; }
-  .panel #actions .heal-action { background: #2b543f; border-color: #8cb780; color: #effadf; }
-  .panel #actions .cashout-action { background: #394540; border-color: #778275; color: #f7ead1; }
-  @media (orientation: landscape) and (max-height: 460px) {
-    #title-scroll { padding: 6px; }
+    #title-scroll { padding: 5px; }
     #title-scroll h2 { margin-bottom: .2rem; font-size: clamp(1rem, 3vw, 1.4rem); }
-    #title-scroll p { margin-bottom: .28rem; max-width: none; font-size: .73rem; }
+    #title-scroll p { margin-bottom: .3rem; font-size: .72rem; }
     .day-stages { gap: 4px; }
-    .day-stages li { gap: .15rem; padding: .27rem; font-size: .7rem; line-height: 1.15; }
+    .day-stages li { padding: .24rem; font-size: .69rem; }
   }
   @media (orientation: portrait) and (max-width: 47rem) {
+    .scene-frame { width: 100%; }
+    .panel { grid-template-columns: 1fr; grid-template-areas: "readout" "status" "actions" "meter"; }
+    .game:has(#title-scroll:not([hidden])) .scene-frame { min-height: min(64vw, 250px); }
     .day-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .day-stages li { padding: .34rem; }
-    #title-scroll p { margin-bottom: .4rem; }
+    .day-stages li { padding: .31rem; }
+    #title-scroll p { margin-bottom: .35rem; }
   }
-  @media (any-pointer: coarse) {
-    .scene-frame { box-shadow: inset 0 0 0 3px #484b5a, inset 0 0 0 5px #242b34; }
-    .dialogue-dock { border-color: #576362; }
+  main[data-phase=dream], main.is-dream {
+    position: fixed;
+    inset: 0;
+    display: block;
+    z-index: 10;
+    background: #080b0b;
   }
-  #affirmation-button { min-height: 44px; width: 100%; letter-spacing: .02em; font-weight: 800; }
-  #affirmation-button:disabled { opacity: .58; }
-  #affirmation-button:not(:disabled) { background: #e9c87f; color: #27291f; }
+  main[data-phase=dream] .game, main.is-dream .game { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
+  main[data-phase=dream] .scene-frame, main.is-dream .scene-frame { width: 100%; }
+  main[data-phase=dream] #scene, main.is-dream #scene { width: 100%; height: 100dvh; object-fit: cover; }
+  main[data-phase=dream] .field-hud, main[data-phase=dream] .panel,
+  main[data-phase=dream] #dialogue, main[data-phase=dream] #zone-intro,
+  main.is-dream .field-hud, main.is-dream .panel, main.is-dream #dialogue, main.is-dream #zone-intro { display: none; }
+  .game:has(#zone-intro[data-mode=guide]:not([hidden])) #status { visibility: hidden; }
+  @media (orientation: portrait) {
+    main[data-phase=dream] #scene { object-fit: contain; }
+  }
+  @media (prefers-reduced-motion: reduce) { #dialogue, #zone-intro { animation: none; } }
 </style>
 </head>
 <body>
 <main>
-  <p class="beta-banner"><strong>BETA</strong><span id="day-label">DAY 1 / 5</span></p>
-  <header><h1>Kyle - A Derm’s Life</h1><div class="top-hud"><span id="cash" aria-label="Yacht fund">$0</span><time id="clock">6:00 AM</time></div></header>
   <div class="game">
     <div class="scene-frame">
       <canvas id="scene" width="640" height="380" role="img" aria-label="Kyle’s bedroom"></canvas>
+      <section id="zone-intro" hidden aria-label="Location">
+        <div class="zone-copy" aria-live="polite" aria-atomic="true">
+          <span class="zone-kicker" id="zone-kicker"></span>
+          <h2 class="zone-title" id="zone-title"></h2>
+          <p class="zone-detail" id="zone-detail"></p>
+        </div>
+        <button class="zone-continue" id="zone-continue" type="button" aria-describedby="zone-title zone-detail">Continue</button>
+      </section>
       
+      <div class="field-hud">
+        <p class="beta-banner"><strong>BETA</strong><span id="day-label">DAY 1 / 5</span></p>
+        <header><h1>Kyle - A Derm’s Life</h1><div class="top-hud"><span id="cash" aria-label="Yacht fund">$0</span><time id="clock">6:00 AM</time></div></header>
+      </div>
+      <section id="dialogue" hidden aria-live="polite"><strong id="speaker"></strong><p id="speech"></p><button id="continue" type="button">Continue · A / Space</button></section>
       <div id="title-scroll" aria-labelledby="goal-heading">
         <div class="day-overview">
+          <p class="title-brand">Kyle - A Derm’s Life</p>
           <h2 id="goal-heading">Save $1,100 in five days</h2>
           <p>Buy a yacht or stream forever. Move with WASD, arrows, or joystick. Follow the exit signs on the right.</p>
           <ol class="day-stages" aria-label="A day in Kyle’s life">
@@ -413,15 +349,12 @@
         </div>
       </div>
     </div>
-    <div class="dialogue-dock">
-      <section id="dialogue" hidden aria-live="polite"><strong id="speaker"></strong><p id="speech"></p><button id="continue" type="button">Continue · A / Space</button></section>
-      <p id="status" aria-live="polite"></p>
-    </div>
     <section class="panel" aria-labelledby="heading">
       <div class="console-switches"><div class="console-readout"><h2 id="heading"></h2><p class="stats" id="stats"></p></div><button id="start" type="button">Start Day 1</button><button id="sound" type="button" aria-pressed="false">Mute</button></div>
       
       
       
+      <p id="status" aria-live="polite"></p>
       <div id="meter" hidden aria-label="Hit the green zone"><span id="zone"></span><span id="needle"></span></div>
       <p id="exchange" hidden aria-live="polite"></p>
       <div id="actions"></div>
@@ -492,6 +425,7 @@ let musicBeat = -1;
 let muted = false;
 let monitorUntil = 0;
 let dialogue = null;
+let zoneIntro = null;
 let pointerCursor = NaN;
 let repAt = -Infinity;
 let reactionAt = 0;
@@ -520,19 +454,44 @@ function advance() {
 function showAreaGuide() {
   const action = mobile.matches ? 'A' : 'Space';
   const pear = mobile.matches ? 'B' : 'X or Eat pear';
-  const guides = {
-    gym: ['Gym', 'Approach a rack. Press ' + action + ' to start and lift. Walk right when done.'],
-    clinic: ['Derm clinic', 'Approach the chair. Press ' + action + ' in the green zone. Up to five patients.'],
-    desk: ['Home', 'Approach the computer. Press ' + action + ' to play. Cash out before bed.'],
-    mine: ['MineScape', 'Move to dodge. Face the beetle and swing with ' + action + '. Heal with ' + pear + '.']
+  const zones = {
+    gym: { title: 'The Gym', time: '06:00 AM', detail: 'Approach a rack. Press ' + action + ' to lift. Walk right to leave.' },
+    clinic: { title: 'Derm Clinic', time: '09:00 AM', detail: 'Approach the chair. Press ' + action + ' in the green zone. Up to five patients.' },
+    desk: { title: 'Back Home', time: '05:00 PM', detail: 'Approach the computer. Press ' + action + ' to enter MineScape.' },
+    mine: { title: 'MineScape', time: '05:00 PM', detail: 'Dodge the beetle. Swing with ' + action + '. Heal with ' + pear + '.' }
   };
-  const zone = state.phase;
-  const guide = guides[zone];
-  if (!guide || state.shiftClosed || state.guidesSeen.includes(zone)) return;
-  talk(guide[0], guide[1], () => {
-    state.guidesSeen.push(zone);
-    save();
-  });
+  const phase = state.phase;
+  const info = zones[phase];
+  if (!info || state.shiftClosed) return;
+  const waiting = !state.guidesSeen.includes(phase);
+  zoneIntro = { phase, waiting, shownAt: now() };
+  const card = byId('zone-intro');
+  card.dataset.mode = waiting ? 'guide' : 'arrival';
+  byId('zone-kicker').textContent = 'DAY ' + String(state.day).padStart(2, '0') + ' / ' + info.time;
+  byId('zone-title').textContent = info.title;
+  byId('zone-detail').textContent = waiting ? info.detail : '';
+  byId('zone-detail').hidden = !waiting;
+  const next = byId('zone-continue');
+  next.hidden = !waiting;
+  next.textContent = 'Continue  ·  ' + action;
+  card.hidden = false;
+  if (waiting) {
+    keys.clear();
+    pointers.clear();
+    walking = false;
+    next.focus({ preventScroll: true });
+  }
+}
+function hideZoneIntro() {
+  zoneIntro = null;
+  byId('zone-intro').hidden = true;
+}
+function advanceZoneIntro() {
+  if (!zoneIntro?.waiting || now() - zoneIntro.shownAt < .26) return;
+  state.guidesSeen.push(zoneIntro.phase);
+  hideZoneIntro();
+  lastFrame = now();
+  save();
 }
 function gymLine() {
   if (state.gymPay === gymPay.high) return 'Hey, kid. Looking big today.';
@@ -681,7 +640,7 @@ function resetWalk() {
 
 function walk(dt) {
   const available = stations[state.phase];
-  if (!available || monitorUntil || dialogue || trialUntil || titleOpen || lifting || clinicActive || loot) return;
+  if (!available || monitorUntil || dialogue || zoneIntro?.waiting || trialUntil || titleOpen || lifting || clinicActive || loot) return;
   const directions = new Set(pointers.values());
   for (const key of keys) directions.add(keyDirections.get(key));
   const dx = Number(directions.has('right')) - Number(directions.has('left'));
@@ -722,9 +681,9 @@ function button(label, action, { main = false, pressed, disabled = false } = {})
   element.textContent = label;
   element.disabled = disabled;
   if (pressed !== undefined) element.setAttribute('aria-pressed', pressed);
-  element.addEventListener('click', () => { if (!dialogue) action(); });
+  element.addEventListener('click', () => { if (!dialogue && !zoneIntro?.waiting) action(); });
   if (action === cut) {
-    element.addEventListener('pointerdown', () => { if (!dialogue) pointerCursor = cursor; });
+    element.addEventListener('pointerdown', () => { if (!dialogue && !zoneIntro?.waiting) pointerCursor = cursor; });
     element.addEventListener('pointercancel', () => { pointerCursor = NaN; });
   }
   byId('actions').append(element);
@@ -745,6 +704,7 @@ function refreshStats() {
   byId('stats').hidden = !details[state.phase];
 }
 function go(phase, message) {
+  hideZoneIntro();
   state.phase = phase;
   state.elapsed = 0;
   state.shiftClosed = false;
@@ -791,7 +751,7 @@ function finishShift(message) {
 
 function renderControls(message) {
   const p = state.phase;
-  document.querySelector('main').classList.remove('typing');
+  document.querySelector('main').dataset.phase = p;
   document.querySelector('main').classList.toggle('in-mine', p === 'mine');
   byId('heading').textContent = labels[p];
   canvas.setAttribute('aria-label', labels[p] + ' cartoon scene');
@@ -1823,13 +1783,13 @@ function draw(t) {
     oval(ex - 16, ey + 2, 4, 5, '#f6cb72');
     oval(ex + 14, ey + 2, 4, 5, '#f6cb72');
     drawMineKyle(t);
-    caption('KYLE  ' + Math.max(0, state.playerHp) + ' HP', 103, 34, 16);
-    caption('SLAG BEETLE  ' + Math.max(0, state.enemyHp) + ' HP', 503, 34, 16);
+    caption('KYLE  ' + Math.max(0, state.playerHp) + ' HP', 103, 93, 16);
+    caption('SLAG BEETLE  ' + Math.max(0, state.enemyHp) + ' HP', 503, 93, 16);
     for (const [left, fraction, color] of [[44, state.playerHp / 24, '#76b388'], [438, state.enemyHp / (state.level === 1 ? 18 : 18 + state.level * 2), '#c08158']]) {
       ctx.fillStyle = '#18242a';
-      ctx.fillRect(left, 40, 120, 5);
+      ctx.fillRect(left, 100, 120, 5);
       ctx.fillStyle = color;
-      ctx.fillRect(left, 40, 120 * Math.max(0, Math.min(1, fraction)), 5);
+      ctx.fillRect(left, 100, 120 * Math.max(0, Math.min(1, fraction)), 5);
     }
     if (enemy.windup) caption('!', ex, ey - 43, 27, '#ffcc80');
   }
@@ -2138,11 +2098,12 @@ function updateClock() {
 }
 function update(t) {
   if (titleOpen) { draw(t); requestAnimationFrame(ms => update(ms / 1000)); return; }
+  if (zoneIntro && !zoneIntro.waiting && t - zoneIntro.shownAt >= 2.6) hideZoneIntro();
   const frameGap = Math.max(0, t - lastFrame);
   const elapsed = frameGap > .25 || document.hidden ? 0 : frameGap;
   const dt = Math.min(.05, elapsed);
   lastFrame = t;
-  if (dialogue) {
+  if (dialogue || zoneIntro?.waiting) {
     byId('clock').classList.remove('glow');
     draw(t);
     requestAnimationFrame(ms => update(ms / 1000));
@@ -2155,6 +2116,12 @@ function update(t) {
     return;
   }
   walk(dt);
+  if (zoneIntro?.waiting) {
+    updateClock();
+    draw(t);
+    requestAnimationFrame(ms => update(ms / 1000));
+    return;
+  }
   if ((!state.shiftClosed && Object.hasOwn(limits, state.phase)) || state.phase === 'exchange') state.elapsed += elapsed;
   if (state.phase === 'gym' && !state.shiftClosed) {
     if (lifting && state.elapsed >= trialAt && state.elapsed < limits.gym - 3) badThoughts();
@@ -2191,6 +2158,13 @@ document.addEventListener('keydown', event => {
   if (trialUntil) {
     if (event.code === 'Space' || event.code === 'Enter') event.preventDefault();
     if (event.code === 'Enter' && !alreadyHeld && !event.repeat && event.timeStamp / 1000 >= trialReadyAt) finishAffirmation();
+    return;
+  }
+  if (zoneIntro?.waiting) {
+    if (event.code === 'Enter' || event.code === 'Space') {
+      event.preventDefault();
+      if (!event.repeat) advanceZoneIntro();
+    }
     return;
   }
   if (dialogue) {
@@ -2247,6 +2221,7 @@ for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture']) {
   stick.addEventListener(eventName, () => { pointers.clear(); byId('knob').style.transform = ''; });
 }
 byId('continue').addEventListener('click', advance);
+byId('zone-continue').addEventListener('click', advanceZoneIntro);
 byId('game-a').addEventListener('pointerdown', () => { if (primary === cut) pointerCursor = cursor; });
 byId('game-a').addEventListener('pointercancel', () => { pointerCursor = NaN; });
 wireTrialPointer(byId('game-a'));
@@ -2255,10 +2230,11 @@ byId('game-a').addEventListener('click', event => {
     if (trialUntil && event.detail === 0 && !spaceHeld) finishAffirmation();
     return;
   }
-  if (dialogue) advance();
+  if (zoneIntro?.waiting) advanceZoneIntro();
+  else if (dialogue) advance();
   else primary?.();
 });
-byId('game-b').addEventListener('click', () => { if (!dialogue) secondary?.(); });
+byId('game-b').addEventListener('click', () => { if (!dialogue && !zoneIntro?.waiting) secondary?.(); });
 byId('sound').addEventListener('click', event => {
   muted = !muted;
   event.currentTarget.setAttribute('aria-pressed', muted);
