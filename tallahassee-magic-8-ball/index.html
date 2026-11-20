@@ -16,8 +16,17 @@ header{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;
 h1{font:700 clamp(1.8rem,5vw,3.1rem)/1 Georgia,serif;margin:0;color:#e3e9bf}
 a{color:#aee1ba;text-underline-offset:.2em}
 .scene{position:relative;overflow:hidden;border:1px solid #426755;border-radius:1.2rem 1.2rem 0 0;background:#10312d}
-.scene img{display:block;width:100%;height:auto;aspect-ratio:2 / 1;object-fit:cover;object-position:center 46%}
-.scene.sleep img{animation:drowse .6s ease-in-out both}
+.portrait{display:block;width:100%;height:auto;aspect-ratio:3 / 2}
+#mouth{transform-box:view-box;transform-origin:294px 211px}
+#mouth[hidden]{display:none}
+#mouth-opening{transform-origin:294px 211px;transform:scaleY(.12)}
+.talking #mouth-opening{animation:open-mouth 230ms ease-in-out 4}
+.talking #jaw{animation:drop-jaw 230ms ease-in-out 4}
+@keyframes open-mouth{0%,100%{transform:scaleY(.12)}38%{transform:scaleY(1)}68%{transform:scaleY(.66)}}
+@keyframes drop-jaw{0%,100%{transform:translateY(0)}38%{transform:translateY(10px)}68%{transform:translateY(6px)}}
+.header-controls{display:flex;align-items:center;gap:.8rem}
+#mute{min-width:5.7rem;white-space:nowrap}
+.scene.sleep .portrait{animation:drowse .6s ease-in-out both}
 @keyframes drowse{45%{transform:translateY(2%) scale(1.03);filter:brightness(.65)}}
 .console{padding:clamp(1rem,3vw,1.65rem);border:1px solid #426755;border-top:0;border-radius:0 0 1.2rem 1.2rem;background:#14251f}
 label{display:block;margin-bottom:.4rem;color:#dbe5cc}
@@ -29,14 +38,26 @@ button{min-height:44px;background:#c2e5a8;color:#102018;border:0;border-radius:.
 #video{margin-top:1rem}
 #video a{display:inline-block;margin-top:.7rem}
 iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
-@media(max-width:560px){main{width:min(100% - 1rem,58rem)}.scene img{aspect-ratio:4/3}header{align-items:center}}
-@media(prefers-reduced-motion:reduce){.scene.sleep img{animation:none}}
+@media(max-width:560px){main{width:min(100% - 1rem,58rem)}header{align-items:center}.header-controls{gap:.5rem}#mute{min-width:4.5rem;padding:.55rem .65rem}}
+@media(prefers-reduced-motion:reduce){.scene.sleep .portrait{animation:none}}
 </style>
 </head>
 <body>
 <main>
-<header><h1>Tallahassee Magic 8-Ball</h1><a href="../">Arcade</a></header>
-<div id="scene" class="scene"><img src="oracle.webp" alt="A giant mustached head floating in green mist over Tallahassee and the Florida Capitol"></div>
+<header><h1>Tallahassee Magic 8-Ball</h1><div class="header-controls"><button type="button" id="mute">Mute</button><a href="../">Arcade</a></div></header>
+<audio id="theme" src="oracle-loop.m4a" loop preload="auto"></audio>
+<div id="scene" class="scene">
+<svg class="portrait" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A giant mustached head floating in green mist over Tallahassee and the Florida Capitol">
+  <defs>
+    <clipPath id="jaw-mask"><path d="M263 212 Q293 205 325 213 L324 225 Q294 236 265 224Z"/></clipPath>
+  </defs>
+  <image href="oracle.webp" width="600" height="400"/>
+  <g id="mouth" hidden>
+    <path id="mouth-opening" d="M264 210 Q293 203 324 211 Q312 228 293 229 Q274 226 264 210Z" fill="#3b1c20"/>
+    <g id="jaw"><image href="oracle.webp" width="600" height="400" clip-path="url(#jaw-mask)"/></g>
+  </g>
+</svg>
+</div>
 <section class="console" aria-label="Ask the oracle">
 <form id="oracle">
 <label for="question">Ask the floating head a question</label>
@@ -93,6 +114,84 @@ const scene = document.querySelector('#scene');
 const answer = document.querySelector('#answer');
 const video = document.querySelector('#video');
 const loadVideo = document.querySelector('#load-video');
+const theme = document.querySelector('#theme');
+const mute = document.querySelector('#mute');
+const mouth = document.querySelector('#mouth');
+
+let muted = false;
+try { muted = localStorage.getItem('tallahassee-muted') === 'true'; } catch {}
+let voiceContext;
+let voiceLevel;
+let currentVoice;
+let mouthTimer;
+
+function startTheme() {
+  if (!muted && theme.paused) theme.play().catch(() => {});
+}
+function updateMute() {
+  mute.textContent = muted ? 'Unmute' : 'Mute';
+  mute.setAttribute('aria-label', muted ? 'Unmute game audio' : 'Mute game audio');
+  if (muted) theme.pause();
+  else startTheme();
+  if (voiceLevel) voiceLevel.gain.value = muted ? 0 : .20;
+}
+mute.addEventListener('click', () => {
+  muted = !muted;
+  try { localStorage.setItem('tallahassee-muted', String(muted)); } catch {}
+  updateMute();
+});
+document.addEventListener('click', event => {
+  if (!event.target.closest('#mute')) startTheme();
+});
+updateMute();
+
+function playWah() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext || muted) return;
+  if (!voiceContext) {
+    voiceContext = new AudioContext();
+    voiceLevel = voiceContext.createGain();
+    voiceLevel.gain.value = .20;
+    voiceLevel.connect(voiceContext.destination);
+  }
+  if (voiceContext.state !== 'running') voiceContext.resume().catch(() => {});
+  if (currentVoice) currentVoice.disconnect();
+  const voice = voiceContext.createOscillator();
+  const filter = voiceContext.createBiquadFilter();
+  const envelope = voiceContext.createGain();
+  voice.type = 'sawtooth';
+  filter.type = 'bandpass';
+  filter.Q.value = 1.8;
+  voice.connect(filter).connect(envelope).connect(voiceLevel);
+  currentVoice = voice;
+  const start = voiceContext.currentTime;
+  [146, 123, 137, 107].forEach((note, index) => {
+    const at = start + index * .23;
+    voice.frequency.setValueAtTime(note, at);
+    voice.frequency.exponentialRampToValueAtTime(note * .80, at + .19);
+    filter.frequency.setValueAtTime(380, at);
+    filter.frequency.exponentialRampToValueAtTime(1050 - index * 105, at + .075);
+    filter.frequency.exponentialRampToValueAtTime(375, at + .19);
+    envelope.gain.setValueAtTime(0, at);
+    envelope.gain.linearRampToValueAtTime(.8, at + .065);
+    envelope.gain.linearRampToValueAtTime(0, at + .21);
+  });
+  voice.start(start);
+  voice.stop(start + .92);
+  voice.onended = () => { if (currentVoice === voice) currentVoice = null; };
+}
+function talk() {
+  clearTimeout(mouthTimer);
+  scene.classList.remove('talking');
+  mouth.removeAttribute('hidden');
+  void scene.offsetWidth;
+  scene.classList.add('talking');
+  mouthTimer = setTimeout(() => {
+    scene.classList.remove('talking');
+    mouth.setAttribute('hidden', '');
+  }, 920);
+  playWah();
+}
 
 form.addEventListener('submit', event => {
   event.preventDefault();
@@ -102,6 +201,7 @@ form.addEventListener('submit', event => {
     input.reportValidity();
     return;
   }
+  startTheme();
   previous = chooseAnswer(question);
   answer.textContent = answers[previous];
   scene.classList.remove('sleep');
@@ -112,6 +212,7 @@ form.addEventListener('submit', event => {
   video.querySelector('iframe')?.remove();
   video.hidden = previous !== 4;
   loadVideo.hidden = false;
+  talk();
 });
 input.addEventListener('input', () => input.setCustomValidity(''));
 
