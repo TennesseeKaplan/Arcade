@@ -498,7 +498,7 @@ let effect = '';
 let lastExchangeStep = -1;
 
 function fresh() {
-  return { phase: 'wake', day: 1, elapsed: 0, cash: 0, gymPay: 0, reps: 0, failedGym: false,
+  return { phase: 'wake', day: 1, elapsed: 0, shiftClosed: false, cash: 0, gymPay: 0, reps: 0, failedGym: false,
     exercise: 'Squat', hearts: 3, patients: 0, gold: 0, level: 1, gear: 'Tin blade', gearItems: [], earnedToday: false, mineWins: 0,
     playerHp: 24, enemyHp: 18 };
 }
@@ -521,15 +521,13 @@ const keys = new Set();
 const pointers = new Map();
 const stations = {
   desk: [{ id: 'pc', x: 505, y: 247, name: 'Computer' }],
-  wake: [{ id: 'gym', x: 575, y: 258, name: 'Gym door' }],
+  wake: [],
   gym: [
     { id: 'squat', x: 130, y: 240, name: 'Squat rack' },
-    { id: 'bench', x: 503, y: 240, name: 'Bench' },
-    { id: 'clinic', x: 583, y: 310, name: 'Clinic door' }
+    { id: 'bench', x: 503, y: 240, name: 'Bench' }
   ],
   clinic: [
-    { id: 'patient', x: 410, y: 240, name: 'Patient' },
-    { id: 'home', x: 576, y: 310, name: 'Go home' }
+    { id: 'patient', x: 410, y: 240, name: 'Patient' }
   ],
   mine: [
     { id: 'beetle', x: 347, y: 242, name: 'Slag Beetle' },
@@ -540,7 +538,12 @@ const stations = {
     { id: 'bed', x: 98, y: 282, name: 'End day' }
   ]
 };
-const starts = { wake: 244, desk: 205, gym: 320, clinic: 150, mine: 178, payout: 218 };
+const exits = {
+  wake: { sign: 'Gym', phase: 'gym' },
+  gym: { sign: 'Derm clinic', phase: 'gymPay' },
+  clinic: { sign: 'Home', phase: 'desk' }
+};
+const starts = { wake: 244, desk: 108, gym: 96, clinic: 138, mine: 178, payout: 218 };
 let x = 244, y = 244, facing = 1, walking = false, nearby = null, heardPayout = false;
 
 function resetWalk() {
@@ -565,10 +568,16 @@ function walk(dt) {
   if (walking) {
     if (dx) facing = dx;
     aim = { x: dx / length, y: dy / length };
-    x = Math.max(52, Math.min(591, x + dx * 218 * dt / length));
+    const exit = exits[state.phase];
+    const roomEdge = canvas.width + 56;
+    x = Math.max(52, Math.min(exit ? roomEdge : 591, x + dx * 218 * dt / length));
+    if (exit && dx > 0 && x >= roomEdge) {
+      go(exit.phase, state.phase === 'gym' && state.failedGym ? 'Kyle’s workout is over.' : undefined);
+      return;
+    }
     y = Math.max(202, Math.min(320, y + dy * 160 * dt / length));
   }
-  if (state.phase === 'mine') return;
+  if (state.phase === 'mine' || state.shiftClosed) return;
   let closest = null;
   let radius = 50;
   for (const station of available) {
@@ -615,6 +624,7 @@ function refreshStats() {
 function go(phase, message) {
   state.phase = phase;
   state.elapsed = 0;
+  state.shiftClosed = false;
   lastFrame = now();
   tickStamp = '';
   sceneAt = now();
@@ -644,6 +654,17 @@ function go(phase, message) {
   if (phase === 'exchange') talk('Kyle', 'I need to convert this to dollars. Good thing there’s a way.', () => { sceneAt = now(); exchangeTick(); });
 }
 
+function finishShift(message) {
+  if (state.shiftClosed) return;
+  state.shiftClosed = true;
+  lifting = false;
+  clinicActive = false;
+  trialUntil = 0;
+  nearby = null;
+  renderControls(message);
+  save();
+}
+
 function renderControls(message) {
   const p = state.phase;
   document.querySelector('main').classList.remove('typing');
@@ -659,11 +680,11 @@ function renderControls(message) {
   refreshStats();
   if (p === 'wake') {
     const input = matchMedia('(any-pointer: coarse)').matches ? 'Use the joystick.' : 'Use WASD or the arrow keys.';
-    say('Kyle: “Time for gym.” Walk to the gym door. ' + input);
-    if (nearby === 'gym') button('Enter gym', () => go('gym'), { main: true });
+    say('Walk off the right side to the gym. ' + input);
   }
   if (p === 'gym') {
-    say(message || 'Walk up to the squat rack or bench.');
+    say(message || (state.shiftClosed ? 'Workout finished. Walk right to the clinic.' : 'Walk to the squat rack or bench. Walk off to the right when you’re done.'));
+    if (state.shiftClosed) return;
     if (nearby === 'squat' || nearby === 'bench') {
       if (lifting) {
         say(message || state.exercise + ' · Tap A or Space for each rep.');
@@ -672,7 +693,6 @@ function renderControls(message) {
         button('Step off', secondary);
       } else button(state.exercise, () => { lifting = true; tone(180, .1, 'triangle'); renderControls(); }, { main: true });
     }
-    if (nearby === 'clinic') button('Finish workout', () => go('gymPay'), { main: true });
   }
   if (p === 'gymPay') {
     const line = state.gymPay === gymPay.high ? 'Hey, kid. Looking big today.'
@@ -682,7 +702,8 @@ function renderControls(message) {
     button('Clock in', () => go('clinic'), { main: true });
   }
   if (p === 'clinic') {
-    say(message || 'Walk up to the patient chair.');
+    say(message || (state.shiftClosed ? 'Shift over. Walk right to head home.' : 'Walk to the patient chair. Head home off the right side.'));
+    if (state.shiftClosed) return;
     if (nearby === 'patient' && !clinicActive) button('See patients', () => {
       clinicActive = true;
       renderControls();
@@ -694,9 +715,9 @@ function renderControls(message) {
       button('Hard · ' + dollars(cutPay.hard), () => changeRisk(true), { pressed: risk });
       button('Cut', cut, { main: true });
       secondary = () => { clinicActive = false; renderControls(); };
+      button('Step away', secondary);
       updateZone();
     }
-    if (nearby === 'home') button('Go home', () => go('desk'), { main: true });
   }
   if (p === 'desk') {
     say('Walk to the desk to play MineScape.');
@@ -792,7 +813,7 @@ function cut() {
     : state.hearts ? 'The patient storms out. One heart lost.' : 'Your last patient storms out. Shift over.', () => {
       effect = '';
       hitUntil = 0;
-      if (!state.hearts || state.patients >= patientLimit) { go('desk'); return; }
+      if (!state.hearts || state.patients >= patientLimit) { finishShift(); return; }
       target = .26 + Math.random() * .48;
       updateZone();
       greet();
@@ -1142,14 +1163,6 @@ function sceneryPlate(name) {
     stripe('#827866', 4, [99, 148], [208, 148]);
     face('#d0ad731a', [100, 145], [206, 145], [347, 331], [172, 331]);
   }
-  function bedroomDoor() {
-    slab(551, 107, 67, 159, 6, ['#655648', '#817361', '#40362e']);
-    slab(556, 113, 57, 152, 2, ['#82705b', '#8c7e6c', '#554536']);
-    stripe('#746451', 1, [561, 117], [561, 261]);
-    stripe('#baa285', 2, [582, 125], [582, 252]);
-    art.fillStyle = '#bc9f61';
-    art.fillRect(562, 196, 7, 5);
-  }
   function mattress() {
     face('#42372d44', [25, 311], [267, 282], [319, 307], [102, 353]);
     slab(43, 295, 186, 21, 76, ['#b6a487', '#ddd1b7', '#91816d']);
@@ -1164,7 +1177,6 @@ function sceneryPlate(name) {
   if (name === 'bedroom') {
     tileRoom(['#aca493', '#8d8577', '#82796d', '#bbb3a3', '#86715b', '#907a63', '#695c4c']);
     highWindow();
-    bedroomDoor();
     mattress();
     glow(160, 187, 185, '#ffe2a528');
     for (const [x, top, bottom] of [[41, 187, 230], [227, 74, 195], [309, 163, 237], [495, 90, 150]]) {
@@ -1278,6 +1290,14 @@ function room(wall, floor) {
   flat([[0, 285], [640, 285], [640, 380], [0, 380]], floor);
 }
 
+// Pose pieces use the 110×150 source sprite's own texture and palette.
+const torsoClip = [[0, 0], [110, 0], [110, 41], [84, 43], [78, 52],
+  [74, 65], [75, 72], [84, 99], [110, 104], [110, 150], [0, 150], [0, 104],
+  [29, 99], [38, 74], [38, 65], [32, 51], [26, 43], [0, 41]];
+const armPieces = {
+  sleeve: [[27, 40], [38, 43], [35, 64], [30, 67], [18, 61], [18, 49]],
+  forearm: [[19, 61], [30, 65], [30, 75], [26, 84], [30, 89], [25, 96], [15, 96], [15, 75]]
+};
 function spritePiece(points) {
   ctx.save();
   ctx.beginPath();
@@ -1670,8 +1690,9 @@ function draw(t) {
     line([[263, 172], [271, 228]]);
     caption('LIVE', 519, 119, 18, '#ed8976');
   }
-  if (!trialUntil && !lifting && !clinicActive && p !== 'mine') drawStations();
+  if (!trialUntil && !lifting && !clinicActive && p !== 'mine' && !state.shiftClosed) drawStations();
   ctx.restore();
+  if (exits[p] && !titleOpen && !trialUntil && !lifting && !clinicActive) drawExitSign(exits[p].sign);
   if (p === 'exchange' && state.elapsed >= 2 && state.elapsed < 5.5) drawCashTerminal();
   if (p === 'mine' && !motion.matches && t - sceneAt < .35) {
     ctx.fillStyle = 'rgba(160, 225, 196, ' + (1 - (t - sceneAt) / .35) * .5 + ')';
@@ -1679,6 +1700,23 @@ function draw(t) {
   }
 }
 
+function drawExitSign(destination) {
+  const right = canvas.width - 10;
+  const top = 85;
+  ctx.save();
+  ctx.font = 'bold 17px Georgia, serif';
+  const width = ctx.measureText(destination).width + 54;
+  const left = right - width;
+  flat([[left + 4, top + 5], [right, top + 5], [right, top + 40], [left + 4, top + 40]], '#222a28a0');
+  flat([[left, top], [right - 3, top], [right - 3, top + 34], [left, top + 34]], '#d8c8a1');
+  flat([[left + 2, top + 2], [right - 5, top + 2], [right - 5, top + 32], [left + 2, top + 32]], '#46524a');
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#fcf1d4';
+  ctx.fillText(destination, left + 12, top + 22);
+  flat([[right - 32, top + 15], [right - 22, top + 15], [right - 22, top + 10],
+    [right - 12, top + 17], [right - 22, top + 24], [right - 22, top + 19], [right - 32, top + 19]], '#e5d5ad');
+  ctx.restore();
+}
 function drawCashTerminal() {
   ctx.fillStyle = '#141e20';
   ctx.fillRect(0, 0, 640, 380);
@@ -1704,15 +1742,15 @@ function updateClock() {
   const phase = state.phase;
   const hours = {
     wake: 6, gymPay: 9, desk: 17, dream: 22.5, streamer: 22.5,
-    gym: 6 + 3 * Math.min(1, state.elapsed / limits.gym),
-    clinic: 9 + 8 * Math.min(1, state.elapsed / limits.clinic),
+    gym: state.shiftClosed ? 9 : 6 + 3 * Math.min(1, state.elapsed / limits.gym),
+    clinic: state.shiftClosed ? 17 : 9 + 8 * Math.min(1, state.elapsed / limits.clinic),
     mine: 17 + 5 * Math.min(1, state.elapsed / limits.mine),
     exchange: 22, payout: 22.25, done: 22.5, yacht: 22.5
   };
   const minutes = Math.floor(hours[phase] * 60);
   const hour = Math.floor(minutes / 60);
   byId('clock').textContent = (hour % 12 || 12) + ':' + String(minutes % 60).padStart(2, '0') + (hour < 12 ? ' AM' : ' PM');
-  const remaining = limits[phase] - state.elapsed;
+  const remaining = state.shiftClosed ? 0 : limits[phase] - state.elapsed;
   byId('clock').classList.toggle('glow', Boolean(trialUntil) || (remaining > 0 && remaining <= 4));
   const tick = phase + Math.ceil(remaining);
   if (remaining > 0 && remaining <= 4 && tick !== tickStamp) {
@@ -1733,25 +1771,25 @@ function update(t) {
     return;
   }
   walk(dt);
-  if (Object.hasOwn(limits, state.phase) || state.phase === 'exchange') state.elapsed += elapsed;
-  if (state.phase === 'gym') {
+  if ((!state.shiftClosed && Object.hasOwn(limits, state.phase)) || state.phase === 'exchange') state.elapsed += elapsed;
+  if (state.phase === 'gym' && !state.shiftClosed) {
     if (!trialUntil && state.elapsed >= trialAt && state.elapsed < limits.gym - 3) badThoughts();
     if (trialUntil) {
       say('BAD THOUGHTS · ' + Math.max(0, Math.ceil(trialUntil - state.elapsed)) + 's · ' + affirmation);
       if (state.elapsed >= trialUntil) {
         state.failedGym = true;
         feedback(false);
-        go('gymPay', 'The bad thoughts won. Kyle peed his shorts.');
+        finishShift('Bad thoughts won. Walk right to head to the clinic.');
       }
     }
-    if (state.phase === 'gym' && state.elapsed >= limits.gym) go('gymPay');
+    if (state.elapsed >= limits.gym) finishShift();
   }
-  if (state.phase === 'clinic') {
+  if (state.phase === 'clinic' && !state.shiftClosed) {
     const sweep = (state.elapsed * (risk ? 1.04 : .78)) % 2;
     cursor = sweep < 1 ? sweep : 2 - sweep;
     byId('needle').style.left = (cursor * 100) + '%';
     if (state.elapsed >= limits.clinic ||
-      ((!state.hearts || state.patients >= patientLimit) && t >= hitUntil)) go('desk');
+      ((!state.hearts || state.patients >= patientLimit) && t >= hitUntil)) finishShift();
   }
   if (state.phase === 'desk' && !monitorUntil && state.elapsed >= limits.desk) enterMonitor();
   if (state.phase === 'desk' && monitorUntil && t >= monitorUntil) go('mine');
