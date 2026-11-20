@@ -314,6 +314,89 @@
     main[data-phase=dream] #scene { object-fit: contain; }
   }
   @media (prefers-reduced-motion: reduce) { #dialogue, #zone-intro { animation: none; } }
+
+  @media (any-pointer: coarse) {
+    .panel {
+      --pad-stick: clamp(46px, 9vw, 60px);
+      --pad-button: clamp(44px, 8.4vw, 56px);
+      --pad-gutter: clamp(5px, 1.6vw, 16px);
+      --pad-gap: clamp(5px, 1vw, 10px);
+      --pad-clear: clamp(7px, 1.5vw, 12px);
+    }
+    .panel:has(#movement:not([hidden])) {
+      min-height: calc(max(var(--pad-stick), var(--pad-button)) + 29px);
+      padding-inline:
+        calc(var(--pad-gutter) + var(--pad-stick) + var(--pad-clear))
+        calc(var(--pad-gutter) + 2 * var(--pad-button) + var(--pad-gap) + var(--pad-clear));
+    }
+    .panel:has(#movement:not([hidden])) #actions {
+      justify-content: center;
+      gap: 3px;
+    }
+    .panel:has(#movement:not([hidden])) #actions > .pad-mirror,
+    .panel:has(#movement:not([hidden])) #actions:not(:has(> :not(.pad-mirror))) { display: none; }
+    #actions > button, #actions > a {
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: 100%;
+      white-space: nowrap;
+    }
+    #actions > button {
+      min-height: clamp(36px, 6.8vw, 44px);
+      font-size: clamp(.69rem, 1.8vw, .82rem);
+    }
+    #actions #affirmation-button { white-space: normal; }
+    #movement {
+      display: grid;
+      inset: 0 var(--pad-gutter);
+      grid-template-columns: var(--pad-stick) minmax(0, 1fr) repeat(2, var(--pad-button));
+      grid-template-rows: 1fr;
+      column-gap: var(--pad-gap);
+      align-items: center;
+    }
+    #stick, #movement .ab {
+      grid-row: 1;
+      align-self: center;
+      margin: 0;
+      transform: translateY(-4px);
+    }
+    #stick {
+      grid-column: 1;
+      width: var(--pad-stick);
+      height: var(--pad-stick);
+    }
+    #movement #game-a { grid-column: 3; }
+    #movement #game-b { grid-column: 4; }
+    #movement .ab {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: var(--pad-button);
+      height: var(--pad-button);
+      min-height: var(--pad-button);
+      line-height: 1;
+      touch-action: none;
+    }
+    #stick, #movement .ab { -webkit-tap-highlight-color: transparent; }
+    #movement .ab[aria-disabled=true] { opacity: .58; }
+    #movement .ab:active:not([aria-disabled=true]) { filter: brightness(1.2); }
+    #movement .pad-letter { font-size: clamp(.92rem, 2.6vw, 1.2rem); }
+    #movement .pad-action {
+      position: absolute;
+      inset: calc(100% + 4px) auto auto 50%;
+      width: max-content;
+      max-width: calc(var(--pad-button) + var(--pad-gap) - 2px);
+      transform: translateX(-50%);
+      color: #eee5cd;
+      font-size: clamp(.62rem, 1.65vw, .72rem);
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      pointer-events: none;
+    }
+    #movement .pad-action:empty { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -360,8 +443,8 @@
       <div id="actions"></div>
       <div id="movement" aria-label="Game controls">
         <div id="stick" aria-label="Movement joystick"><span id="knob"></span></div>
-        <button class="ab" id="game-a" type="button" aria-label="A, interact">A</button>
-        <button class="ab" id="game-b" type="button" aria-label="B, back or use item">B</button>
+        <button class="ab" id="game-a" type="button" aria-label="A"><span class="pad-letter">A</span><span class="pad-action" id="pad-a-label"></span></button>
+        <button class="ab" id="game-b" type="button" aria-label="B"><span class="pad-letter">B</span><span class="pad-action" id="pad-b-label"></span></button>
       </div>
     </section>
   </div>
@@ -411,6 +494,8 @@ const motion = matchMedia('(prefers-reduced-motion: reduce)');
 let state;
 let primary;
 let secondary;
+let primaryLabel = '';
+let secondaryLabel = '';
 let titleOpen = true;
 let lifting = false;
 let clinicActive = false;
@@ -433,6 +518,18 @@ let swing = null;
 let aim = { x: 1, y: 0 };
 let enemy = { x: 470, y: 242, windup: 0, recover: 0, flash: 0 };
 
+function updatePadLabels() {
+  const reading = dialogue || zoneIntro?.waiting;
+  const affirming = Boolean(trialUntil);
+  const a = affirming ? (trialArmed ? 'Affirm' : 'Wait') : reading ? 'Next' : primaryLabel;
+  const b = affirming || reading ? '' : secondaryLabel;
+  for (const [id, label, active] of [['a', a, Boolean(a) && (!affirming || trialArmed)], ['b', b, Boolean(b)]]) {
+    const control = byId('game-' + id);
+    byId('pad-' + id + '-label').textContent = label;
+    control.setAttribute('aria-label', id.toUpperCase() + (label ? ', ' + label : ''));
+    control.setAttribute('aria-disabled', String(!active));
+  }
+}
 function talk(name, words, next, hold = .35) {
   dialogue = { at: now(), next, hold };
   keys.clear();
@@ -442,6 +539,7 @@ function talk(name, words, next, hold = .35) {
   byId('speech').textContent = words;
   byId('dialogue').hidden = false;
   byId('continue').focus();
+  updatePadLabels();
 }
 function advance() {
   if (!dialogue || now() - dialogue.at < dialogue.hold) return;
@@ -450,6 +548,7 @@ function advance() {
   dialogue = null;
   byId('dialogue').hidden = true;
   next?.();
+  updatePadLabels();
 }
 function showAreaGuide() {
   const action = mobile.matches ? 'A' : 'Space';
@@ -481,10 +580,12 @@ function showAreaGuide() {
     walking = false;
     next.focus({ preventScroll: true });
   }
+  updatePadLabels();
 }
 function hideZoneIntro() {
   zoneIntro = null;
   byId('zone-intro').hidden = true;
+  updatePadLabels();
 }
 function advanceZoneIntro() {
   if (!zoneIntro?.waiting || now() - zoneIntro.shownAt < .26) return;
@@ -675,7 +776,7 @@ function walk(dt) {
   renderControls();
 }
 
-function button(label, action, { main = false, pressed, disabled = false } = {}) {
+function button(label, action, { main = false, alternate = false, padLabel = label, pressed, disabled = false } = {}) {
   const element = document.createElement('button');
   element.type = 'button';
   element.textContent = label;
@@ -687,7 +788,16 @@ function button(label, action, { main = false, pressed, disabled = false } = {})
     element.addEventListener('pointercancel', () => { pointerCursor = NaN; });
   }
   byId('actions').append(element);
-  if (main && !disabled) primary = action;
+  if (main || alternate) element.classList.add('pad-mirror');
+  if (!disabled && main) {
+    primary = action;
+    primaryLabel = padLabel;
+  }
+  if (!disabled && alternate) {
+    secondary = action;
+    secondaryLabel = padLabel;
+  }
+  if (main || alternate) updatePadLabels();
 }
 function say(message) { byId('status').textContent = message; }
 function refreshStats() {
@@ -761,6 +871,9 @@ function renderControls(message) {
   byId('exchange').hidden = p !== 'exchange';
   primary = null;
   secondary = null;
+  primaryLabel = '';
+  secondaryLabel = '';
+  updatePadLabels();
   refreshStats();
   if (p === 'wake') {
     const input = matchMedia('(any-pointer: coarse)').matches ? 'Use the joystick.' : 'Use WASD or the arrow keys.';
@@ -773,14 +886,13 @@ function renderControls(message) {
       if (lifting) {
         say(message || state.exercise + ' · Tap A or Space for each rep.');
         button('Lift', lift, { main: true });
-        secondary = () => { lifting = false; renderControls(); };
-        button('Step off', secondary);
+        button('Step off', () => { lifting = false; renderControls(); }, { alternate: true, padLabel: 'Off' });
       } else button(state.exercise, () => { lifting = true; tone(180, .1, 'triangle'); renderControls(); }, { main: true });
     }
   }
   if (p === 'gymPay') {
     say((message ? message + ' ' : '') + 'Gym payout  +' + dollars(state.gymPay));
-    button('Clock in', () => go('clinic'), { main: true });
+    button('Clock in', () => go('clinic'), { main: true, padLabel: 'Clinic' });
   }
   if (p === 'clinic') {
     say(message || (state.shiftClosed ? 'Shift over. Walk right to head home.' : 'Walk to the patient chair. Head home off the right side.'));
@@ -789,34 +901,32 @@ function renderControls(message) {
       clinicActive = true;
       renderControls();
       greet();
-    }, { main: true });
+    }, { main: true, padLabel: 'Patients' });
     if (clinicActive) {
       say(message || 'Patient ' + (state.patients + 1) + ' of ' + patientLimit + ' · Cut in the green zone.');
       button('Easy · ' + dollars(cutPay.easy), () => changeRisk(false), { pressed: !risk });
       button('Hard · ' + dollars(cutPay.hard), () => changeRisk(true), { pressed: risk });
       button('Cut', cut, { main: true });
-      secondary = () => { clinicActive = false; renderControls(); };
-      button('Step away', secondary);
+      button('Step away', () => { clinicActive = false; renderControls(); }, { alternate: true, padLabel: 'Back' });
       updateZone();
     }
   }
   if (p === 'desk') {
     say('Walk to the desk to play MineScape.');
-    if (nearby === 'pc') button('Play MineScape', enterMonitor, { main: true });
+    if (nearby === 'pc') button('Play MineScape', enterMonitor, { main: true, padLabel: 'Play' });
   }
   if (p === 'mine') {
     if (loot) {
       say('You did it! The brave warrior gets ' + loot + '.');
-      button('✓ Equip', equipLoot, { main: true });
+      button('✓ Equip', equipLoot, { main: true, padLabel: 'Equip' });
     } else {
       say(message || 'Face the beetle to swing. Step out of the red ring to dodge.');
-      button(mobile.matches ? 'Swing · A' : 'Swing · Space', startFight, { main: true });
+      button('Swing · Space', startFight, { main: true, padLabel: 'Swing' });
       byId('actions').lastElementChild.classList.add('swing-action');
-      button(mobile.matches ? 'Eat pear · B' : 'Eat pear · X', eat);
+      button('Eat pear · X', eat, { alternate: true, padLabel: 'Pear' });
       const pearButton = byId('actions').lastElementChild;
       pearButton.classList.add('heal-action');
       pearButton.title = 'Restore up to 7 HP';
-      secondary = eat;
       button('Cash out', () => go('exchange'));
       byId('actions').lastElementChild.classList.add('cashout-action');
     }
@@ -832,11 +942,12 @@ function renderControls(message) {
       : 'Day ' + state.day + ' complete. ' + dollars(state.cash) + ' of ' + dollars(yachtPrice) + ' saved.');
     if (p === 'done' && state.cash >= yachtPrice) button('Buy yacht', buyYacht, { main: true });
     if (p === 'done' && state.day < daysToPlay) button('Start day ' + (state.day + 1), nextDay, { main: state.cash < yachtPrice });
-    if (p === 'done' && state.day === daysToPlay && state.cash < yachtPrice) button('See what happens to Kyle', () => go('streamer'), { main: true });
+    if (p === 'done' && state.day === daysToPlay && state.cash < yachtPrice) button('See ending', () => go('streamer'), { main: true });
     if (p !== 'done') button('New game', restart, { main: true });
     const back = document.createElement('a');
     back.href = '../';
-    back.textContent = 'Back to Arcade';
+    back.textContent = 'Arcade';
+    back.setAttribute('aria-label', 'Back to Arcade');
     byId('actions').append(back);
   }
 }
@@ -870,7 +981,8 @@ function badThoughts() {
   trialButton = document.createElement('button');
   trialButton.type = 'button';
   trialButton.id = 'affirmation-button';
-  trialButton.textContent = affirmation;
+  trialButton.textContent = mobile.matches ? 'I AM A DOCTOR' : affirmation;
+  trialButton.setAttribute('aria-label', affirmation);
   trialButton.disabled = true;
   wireTrialPointer(trialButton);
   trialButton.addEventListener('click', event => {
@@ -880,6 +992,7 @@ function badThoughts() {
   });
   byId('actions').append(trialButton);
   cueTrial(start);
+  updatePadLabels();
   tone(74, .45, 'triangle', .13);
   tone(55, .7, 'triangle', .07, .15);
 }
@@ -895,6 +1008,7 @@ function cueTrial(t) {
   if (!trialArmed && t >= trialReadyAt) {
     trialArmed = true;
     trialButton.disabled = false;
+    updatePadLabels();
     tone(527, .11, 'triangle', .09);
   }
   const action = mobile.matches
@@ -978,6 +1092,8 @@ function enterMonitor() {
   say('Kyle settles in at the computer.');
   byId('actions').replaceChildren();
   primary = null;
+  primaryLabel = '';
+  updatePadLabels();
 }
 function resetArena() {
   x = 205;
@@ -2224,17 +2340,36 @@ byId('continue').addEventListener('click', advance);
 byId('zone-continue').addEventListener('click', advanceZoneIntro);
 byId('game-a').addEventListener('pointerdown', () => { if (primary === cut) pointerCursor = cursor; });
 byId('game-a').addEventListener('pointercancel', () => { pointerCursor = NaN; });
+// Touch pointer-up also works when the joystick already owns the first finger.
+function bindPad(control, run) {
+  let touchAt = -Infinity;
+  control.addEventListener('pointerup', event => {
+    if (event.pointerType !== 'touch') return;
+    touchAt = now();
+    const bounds = control.getBoundingClientRect();
+    if (event.clientX >= bounds.left && event.clientX <= bounds.right &&
+        event.clientY >= bounds.top && event.clientY <= bounds.bottom) run(event);
+    else if (control.id === 'game-a') {
+      pointerCursor = NaN;
+      trialPresses.delete(control);
+    }
+  });
+  control.addEventListener('click', event => {
+    if (event.detail > 0 && now() - touchAt < .7) return;
+    run(event);
+  });
+}
 wireTrialPointer(byId('game-a'));
-byId('game-a').addEventListener('click', event => {
+bindPad(byId('game-a'), event => {
   if (consumeTrialPointer(byId('game-a'))) {
-    if (trialUntil && event.detail === 0 && !spaceHeld) finishAffirmation();
+    if (trialUntil && event.type === 'click' && event.detail === 0 && !spaceHeld) finishAffirmation();
     return;
   }
   if (zoneIntro?.waiting) advanceZoneIntro();
   else if (dialogue) advance();
   else primary?.();
 });
-byId('game-b').addEventListener('click', () => { if (!dialogue && !zoneIntro?.waiting) secondary?.(); });
+bindPad(byId('game-b'), () => { if (!dialogue && !zoneIntro?.waiting) secondary?.(); });
 byId('sound').addEventListener('click', event => {
   muted = !muted;
   event.currentTarget.setAttribute('aria-pressed', muted);
