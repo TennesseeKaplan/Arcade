@@ -109,11 +109,18 @@
       align-items: center;
       gap: .65rem;
     }
-    .carl-sprite {
+    .carl-sprite, .kyle-sprite {
       flex: none;
       width: 2.5rem;
       height: auto;
       image-rendering: pixelated;
+    }
+    .game-still {
+      display: block;
+      width: 100%;
+      aspect-ratio: 640 / 380;
+      object-fit: cover;
+      border-bottom: 1px solid var(--border);
     }
     .game-grid .coming-soon {
       min-height: 9rem;
@@ -161,11 +168,12 @@
         <li class="featured-game">
           <article class="game-card">
             <div class="game-cover">
-              <h3>Kyle - A Derm’s Life</h3>
+              <h3><img class="kyle-sprite" src="./kyle-a-derms-life/card-sprite.png" width="110" height="150" alt=""> Kyle - A Derm’s Life</h3>
             </div>
+            <img class="game-still" src="./kyle-a-derms-life/card-still.webp" width="640" height="380" loading="lazy" alt="Kyle at the clinic with a patient">
             <div class="game-details">
               <p>Lift, work the clinic, and trade MineScape gold to save up for a yacht.</p>
-              <a class="play" href="./kyle-a-derms-life/">Play Kyle · BETA</a>
+              <a class="play" href="./kyle-a-derms-life/">Play Kyle - A Derm’s Life</a>
             </div>
           </article>
         </li>
