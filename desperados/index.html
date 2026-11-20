@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desperados — Jack and Danny</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#201722;color:#fff0ce;font:16px system-ui}main{max-width:860px;margin:auto;padding:12px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}h1{margin:0;color:#ffcb80;font:900 clamp(2rem,7vw,4rem)/.95 Georgia}header p{margin:.4rem 0 0}#clock{font:800 1.1rem monospace;color:#ffcb80}
+canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:#3a2933}#frame{position:relative;border:2px solid #957050}
+#overlay{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#261c28e8;padding:12px}[hidden]{display:none!important}h2,p{margin:0 0 8px}
+button{min-height:43px;border:1px solid #b57b4d;background:#ffcb80;color:#311f27;font:700 .9rem system-ui;padding:5px 10px;border-radius:4px;touch-action:none}
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;padding:8px 0;color:#f0cfac}a{color:inherit}#touch{display:none;gap:5px}@media(any-pointer:coarse){#touch{display:flex}}@media(max-width:500px){#overlay h2{font-size:1.15rem}#overlay p{font-size:.8rem}}
+</style></head><body><main>
+<header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
+<div id="frame"><canvas id="screen" width="384" height="216" aria-label="Desperados playfield"></canvas>
+<section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message">Run and steer with ← →. Jump with ↑. Shoot with Space.</p><div><button id="action">Start run</button> <button id="copy" hidden>Copy time</button></div></section></div>
+<footer><span id="status">Best time —</span><div id="touch"><button data-key="ArrowLeft" aria-label="Left">←</button><button data-key="ArrowRight" aria-label="Right">→</button><button data-key="ArrowUp">Jump</button><button data-key="Space">Shoot</button></div><a href="https://tennesseekaplan.github.io/Arcade/">Arcade</a></footer>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), ctx=$('screen').getContext('2d');
+const W=384,H=216,floor=183,roadY=166;
+const keys=new Set(), touches=new Map(), configs=[
+ {cars:3,foes:1,fire:2.2,chase:15,gap:1.24},
+ {cars:4,foes:2,fire:1.75,chase:18,gap:1.04},
+ {cars:5,foes:3,fire:1.4,chase:21,gap:.86}
+];
+let phase='title', level=0, carIndex=0, jack, bullets=[], foes=[], hazards=[], carX=192, heat=0, chase=0, spawn=0, seed=1, shot=0, hit=0;
+let previous=performance.now(), now=previous, sceneAt=previous, start=null, finish=null, retries=0, best=null;
+try{const saved=Number(localStorage.getItem('desperados-best'));if(saved>0)best=saved;}catch{}
+const time=ms=>{const t=Math.max(0,Math.floor(ms));return Math.floor(t/60000)+':'+String(Math.floor(t/1000)%60).padStart(2,'0')+'.'+String(t%1000).padStart(3,'0');};
+const elapsed=()=>start===null?0:(finish??performance.now())-start;
+const down=k=>keys.has(k)||[...touches.values()].includes(k);
+const box=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h);};
+const words=(s,x,y,sz=10,c='#fff0ce')=>{ctx.fillStyle=c;ctx.font='bold '+sz+'px monospace';ctx.textAlign='center';ctx.fillText(s,x,y);};
+const poly=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();};
+function scene(next){phase=next;sceneAt=performance.now();$('overlay').hidden=true;if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();}
+function modal(title,body,button,action){$('heading').textContent=title;$('message').textContent=body;$('action').textContent=button;$('action').onclick=action;$('overlay').hidden=false;}
+function startRun(){level=0;retries=0;start=performance.now();finish=null;$('copy').hidden=true;scene('safe');}
+function setupCar(index,hp=3){carIndex=index;jack={x:19,y:floor,vy:0,hp,dir:1};bullets=[];hit=0;shot=0;foes=Array.from({length:configs[level].foes},(_,i)=>({x:160+i*69,at:1.15+i*.42}));scene('train');}
+function setupChase(){carX=192;heat=0;chase=0;spawn=.75;hazards=[];seed=739+level*419;scene('drive');}
+function retry(kind){retries++;scene(kind==='train'?'trainRetry':'driveRetry');modal(kind==='train'?'Jack is pinned down':'Danny got caught','Retry time counts toward your finish.','Retry',kind==='train'?()=>setupCar(0):setupChase);}
+function complete(){finish=performance.now();const n=elapsed();if(best===null||n<best){best=n;try{localStorage.setItem('desperados-best',String(n));}catch{}}scene('ending');}
+function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+function update(dt){
+ const age=(now-sceneAt)/1000,cfg=configs[level];
+ if(phase==='safe'&&age>=2)setupCar(0);
+ if(phase==='handoff'&&age>=2.2)setupChase();
+ if(phase==='ending'&&age>=7){scene('result');$('copy').hidden=false;modal('Escaped in '+time(elapsed()),'Best '+time(best)+' · '+retries+' retries','Run again',startRun);}
+ if(phase==='train'){
+  const dx=Number(down('ArrowRight'))-Number(down('ArrowLeft'));
+  if(dx)jack.dir=dx;jack.x=Math.max(12,Math.min(W-12,jack.x+dx*119*dt));
+  if(down('ArrowUp')&&jack.y===floor){jack.vy=-182;}
+  jack.vy+=480*dt;jack.y=Math.min(floor,jack.y+jack.vy*dt);if(jack.y===floor)jack.vy=0;
+  shot-=dt;hit-=dt;
+  if(down('Space')&&shot<=0){bullets.push({x:jack.x+jack.dir*10,y:jack.y-16,v:jack.dir*265,ours:true});shot=.24;}
+  for(const foe of foes){
+   if(age>=foe.at){bullets.push({x:foe.x,y:floor-15,v:Math.sign(jack.x-foe.x||-1)*(120+level*22),ours:false});foe.at=age+cfg.fire;}
+  }
+  for(const b of bullets){
+   b.x+=b.v*dt;
+   if(b.ours){const i=foes.findIndex(f=>Math.abs(f.x-b.x)<10&&b.y>floor-32&&b.y<floor);if(i>=0){foes.splice(i,1);b.dead=true;}}
+   else if(hit<=0&&Math.abs(jack.x-b.x)<8&&b.y>jack.y-29&&b.y<jack.y){b.dead=true;hit=1;if(--jack.hp===0){retry('train');return;}}
+  }
+  bullets=bullets.filter(b=>!b.dead&&b.x>0&&b.x<W);
+  if(jack.x>=W-13&&!foes.length){if(carIndex+1===cfg.cars)scene('handoff');else setupCar(carIndex+1,jack.hp);}
+ }
+ if(phase==='drive'){
+  chase+=dt;const dx=Number(down('ArrowRight'))-Number(down('ArrowLeft'));carX=Math.max(65,Math.min(319,carX+dx*153*dt));
+  spawn-=dt;
+  if(spawn<=0){const lane=Math.floor(random()*5);hazards.push({x:82+55*lane,y:-20,type:random()<.73?'cactus':'police',hit:false});if(level>0&&random()<.45)hazards.push({x:82+55*((lane+2)%5),y:-35,type:'cactus',hit:false});spawn=cfg.gap;}
+  for(const h of hazards){h.y+=(91+level*16)*(h.type==='police'?.8:1)*dt;if(!h.hit&&Math.abs(h.x-carX)<16&&Math.abs(h.y-roadY)<18){h.hit=true;heat+=h.type==='police'?39:34;}}
+  hazards=hazards.filter(h=>h.y<240);heat=Math.max(0,heat-dt*3.8);
+  if(heat>=100){retry('drive');return;}
+  if(chase>=cfg.chase){if(level===2)complete();else{level++;scene('safe');}}
+ }
+}
+function person(x,y,type,walk=false,glasses=false){
+ const danny=type==='danny', enemy=type==='enemy', hat=enemy?'#675266':danny?'#625146':'#a56742', coat=enemy?'#ae7157':danny?'#ceb194':'#e7c489', scarf=danny?'#4c8c8b':enemy?'#cf974e':'#ab4941';
+ const step=walk?Math.round(Math.sin(now/70)*3):0;
+ box(x-8,y-12,7,10+step,'#3e435c');box(x+1,y-12,7,10-step,'#5c5773');
+ box(x-9,y-3+step,8,3,'#2b242c');box(x+1,y-3-step,8,3,'#2b242c');
+ box(x-10,y-23,20,13,'#462b36');box(x-8,y-23,16,11,coat);box(x-12,y-22,4,8,'#bc886a');box(x+8,y-22,4,8,'#bc886a');
+ box(x-7,y-33,14,12,'#a96955');box(x-5,y-33,11,8,'#eab582');box(x-7,y-33,3,8,danny?'#222331':'#493135');
+ box(x-4,y-28,2,2,'#302630');box(x+3,y-28,2,2,'#302630');if(danny)box(x-2,y-25,6,2,'#422d32');
+ if(glasses){box(x-7,y-29,14,4,'#261e32');box(x-6,y-29,3,1,'#bbd2ca');}
+ box(x-8,y-24,16,3,scarf);box(x+4,y-22,4,4,scarf);
+ box(x-7,y-39,13,7,hat);box(x-5,y-40,9,2,hat);box(x-7,y-34,13,2,'#54313d');box(x-11,y-33,22,3,hat);
+}
+function landscape(s=0, sunset=false){
+ box(0,0,W,H,sunset?'#b75f67':'#db8a6d');box(0,43,W,28,'#efab77');box(274,29,34,34,'#ffd591');
+ for(let i=0;i<6;i++){const x=i*91-(s*.25%91);poly([[x-30,113],[x+7,62],[x+28,62],[x+70,113]],i%2?'#986671':'#ae6f71');}
+ box(0,112,W,104,'#bc805c');for(let i=0;i<18;i++)box((i*81-s*.7)%397,(i*31)%85+123,8,2,'#e6a878');
+}
+function interior(){
+ box(0,0,W,H,'#4e3036');box(0,27,W,119,'#9e6551');
+ for(let i=0;i<5;i++){const x=8+i*77;box(x,41,63,63,'#573a40');box(x+4,45,55,54,'#e6996c');poly([[x+4,87],[x+21,66],[x+31,66],[x+54,87]],'#ae6771');box(x+4,88,55,11,'#d18a65');box(x+29,45,3,54,'#784a48');}
+ box(0,113,W,9,'#643744');box(0,139,W,44,'#8d554d');box(0,180,W,36,'#4e3039');
+ for(let i=0;i<14;i++)box(i*29,193,17,2,'#896056');
+ box(358,116,25,66,'#412a36');box(362,120,18,60,'#6e4b48');
+ words('EXIT →',369,111,7);
+}
+function vehicle(x,y,color,police=false){
+ box(x-13,y-19,26,38,'#342836');box(x-11,y-17,22,34,color);box(x-8,y-10,16,16,'#352c3c');box(x-7,y-10,14,3,'#9eabaa');box(x-11,y+10,22,5,color);
+ box(x-14,y-13,4,8,'#2c2332');box(x+10,y-13,4,8,'#2c2332');box(x-14,y+7,4,8,'#2c2332');box(x+10,y+7,4,8,'#2c2332');
+ box(x-9,y-18,4,2,'#ffda99');box(x+5,y-18,4,2,'#ffda99');if(police){box(x-6,y-1,6,3,'#e55c55');box(x,y-1,6,3,'#74a2b8');}
+}
+function drawing(){
+ const age=(now-sceneAt)/1000;
+ if(phase==='safe'||phase==='train'||phase==='trainRetry'){
+  interior();
+  if(phase==='safe'){box(240,115,43,66,'#513d49');box(245,121,32,53,'#85737a');box(251,128,23,40,age>1?'#2e2630':'#67646a');box(257,144,9,3,'#d2a36b');person(217,floor,'jack');words(age>1?'Safe’s open. Run, Jack!':'Level '+(level+1)+' · The score',192,20);}
+  else if(jack){for(const f of foes){person(f.x,floor,'enemy');box(f.x-12,floor-16,6,2,'#403442');}for(const b of bullets)box(b.x,b.y,5,2,b.ours?'#fff2a5':'#ef8e66');
+  if(hit<0||Math.floor(now/65)%2)person(jack.x,jack.y,'jack',down('ArrowLeft')||down('ArrowRight'));box(jack.x+jack.dir*8,jack.y-17,6,2,'#453747');
+  words('LEVEL '+(level+1)+'   CAR '+(carIndex+1)+'/'+configs[level].cars,192,19);words('♥'.repeat(jack.hp),42,19,12,'#ff9a83');}
+ } else if(phase==='drive'||phase==='driveRetry'){
+  box(0,0,W,H,'#cc905f');box(52,0,280,H,'#674956');box(57,0,270,H,'#805b5a');
+  for(let i=-1;i<10;i++){const y=(i*27+(chase*110)%27);box(190,y,4,13,'#d5a678');box(47,y,4,7,'#f2bf83');box(333,y,4,7,'#f2bf83');}
+  for(const h of hazards)if(h.type==='police')vehicle(h.x,h.y,'#bec0b3',true);else{box(h.x-4,h.y-13,8,27,'#426154');box(h.x-10,h.y-5,9,4,'#51755c');box(h.x+3,h.y-9,7,4,'#51755c');}
+  vehicle(carX,roadY,'#bc4c49');vehicle(192,232-heat*.42,'#c0b6a8',true);
+  box(10,15,100,5,'#754a4f');box(10,15,Math.min(100,heat),5,'#fa896d');words('POLICE',35,11,8);
+  words('ESCAPE '+Math.min(100,Math.floor(chase/configs[level].chase*100))+'%',310,16,8);
+ } else {
+  landscape(now/30,phase==='ending'||phase==='result'||phase==='title');
+  if(phase==='handoff'){box(0,106,216,45,'#784551');box(0,115,206,14,'#b57562');for(let i=0;i<5;i++)box(i*38+9,115,20,12,'#f3ba7c');vehicle(290,169,'#bc4c49');person(290,172,'danny');person(183+Math.min(98,age*61),150-Math.sin(Math.min(1,age/1.55)*Math.PI)*44,'jack');words('Danny: Get in!',192,21);}
+  else if(phase==='ending'||phase==='result'){
+   const depart=Math.max(0,age-2.15),y=163-depart*25;ctx.save();ctx.translate(192,y);const scale=Math.max(.18,1-depart*.19);ctx.scale(scale,scale);vehicle(0,0,'#bc4c49');for(const [x,who] of [[-6,'jack'],[6,'danny']]){ctx.save();ctx.translate(x,5);ctx.scale(.42,.42);person(0,0,who,false,true);ctx.restore();}ctx.restore();
+   if(age<2.2){words('HA HA!',192,105,12);for(let i=0;i<6;i++)box(156+i*12,113+Math.sin(age*6+i)*22,6,3,'#9fbd81');}
+   if(age>3.8){box(0,0,W,H,'#211822');words(age<5.5?'Developed by Tennessee Kaplan':'Jack and Danny will return in',192,98,12);if(age>=5.5)words('Avengers: Doomsday',192,116,14);}
+  }else{person(172,172,'jack');person(210,172,'danny');}
+ }
+}
+$('copy').onclick=async()=>{const s='Desperados — '+time(elapsed())+' ('+retries+' retries)';try{await navigator.clipboard.writeText(s);$('message').textContent=s+' copied.';}catch{$('message').textContent=s;}};
+$('action').onclick=startRun;
+const bindings=['ArrowLeft','ArrowRight','ArrowUp','Space'];
+document.addEventListener('keydown',e=>{if(bindings.includes(e.code)&&e.target.tagName!=='BUTTON'){e.preventDefault();keys.add(e.code);}});
+document.addEventListener('keyup',e=>keys.delete(e.code));
+window.addEventListener('blur',()=>{keys.clear();touches.clear();});
+for(const b of document.querySelectorAll('[data-key]')){
+ b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);touches.set(e.pointerId,b.dataset.key);};
+ for(const type of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(type,e=>touches.delete(e.pointerId));
+}
+function frame(t){now=t;const dt=Math.max(0,Math.min(.035,(t-previous)/1000));previous=t;update(dt);drawing();$('clock').textContent=time(elapsed());$('status').textContent='Best time '+(best===null?'—':time(best))+(start!==null?' · Retries '+retries:'');requestAnimationFrame(frame);}
+requestAnimationFrame(frame);
+</script></body></html>
