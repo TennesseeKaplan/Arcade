@@ -9,17 +9,23 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background
 button{min-height:43px;border:1px solid #b57b4d;background:#ffcb80;color:#311f27;font:700 .9rem system-ui;padding:5px 10px;border-radius:4px;touch-action:none}
 footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;padding:8px 0;color:#f0cfac}a{color:inherit}#touch{display:none;gap:5px}@media(any-pointer:coarse){#touch{display:flex}}@media(max-width:500px){#overlay h2{font-size:1.15rem}#overlay p{font-size:.8rem}}
 #touch {width:100%;order:3;justify-content:space-between;align-items:center}
-#stick {position:relative;width:86px;height:86px;flex:none;border:2px solid #92736c;border-radius:50%;background:#2b2231;touch-action:none;pointer-events:auto}
-#stick::after {content:'';position:absolute;inset:23px;border-radius:50%;background:#816374;border:2px solid #d2a28a;box-shadow:0 3px #1e1722;transform:translate(var(--stick-x,0px),var(--stick-y,0px))}
+#dpad {display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(3,44px);gap:1px;pointer-events:auto;user-select:none}
+#dpad button {padding:0;background:#3d2d41;color:#ffdfb4;font-size:1.3rem;border-color:#92736c}
+#dpad button[data-key="ArrowUp"] {grid-area:1 / 2}
+#dpad button[data-key="ArrowLeft"] {grid-area:2 / 1}
+#dpad button[data-key="ArrowRight"] {grid-area:2 / 3}
+#dpad button[data-key="ArrowDown"] {grid-area:3 / 2}
+#dpad button:active {background:#896175}
+#dpad::after {content:'';grid-area:2 / 2;background:#302333;border-radius:8px;pointer-events:none}
 .pad-buttons {display:flex;gap:9px;align-items:end;pointer-events:auto}
 .pad-buttons button {width:48px;height:48px;padding:0;border-radius:50%;font:bold 1rem system-ui;box-shadow:0 3px #6b4350}
 .pad-buttons button span {display:block;font-size:.57rem}
-.pad-buttons button:first-child {transform:translateY(9px);background:#d3a39a}
+.pad-buttons button:first-child {background:#d3a39a}
 .mobile-help {display:none}
 @media(any-pointer:coarse){.desktop-help{display:none}.mobile-help{display:inline}}
 #music {min-height:36px}
 @media (any-pointer:coarse) and (orientation:landscape) and (min-width:570px) and (max-height:540px) {
-  main {max-width:min(calc((100dvh - 84px) * 1.7778), calc(100vw - 245px));min-width:280px;padding:4px}
+  main {max-width:min(calc((100dvh - 84px) * 1.7778), calc(100vw - 292px));min-width:280px;padding:4px}
   header {margin-bottom:3px}
   header h1 {font-size:1.6rem}
   header p {font-size:.75rem}
@@ -31,9 +37,14 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 </style></head><body><main>
 <header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
 <div id="frame"><canvas id="screen" width="768" height="432" aria-label="Desperados playfield"></canvas>
-<section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots or gives gas. Shift brakes.</span><span class="mobile-help">Use the stick to move. A shoots or gives gas. B brakes.</span></p><div><button id="action">Start run</button> <button id="copy" hidden>Copy time</button></div></section></div>
+<section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots or gives gas. Shift brakes.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots or gives gas. B brakes.</span></p><div><button id="action">Start run</button> <button id="copy" hidden>Copy time</button></div></section></div>
 <footer><span id="status">Best time —</span><div id="touch">
-<div id="stick" role="group" aria-label="Movement joystick"></div>
+<div id="dpad" role="group" aria-label="Four-way movement">
+  <button data-key="ArrowUp" aria-label="Up">↑</button>
+  <button data-key="ArrowLeft" aria-label="Left">←</button>
+  <button data-key="ArrowRight" aria-label="Right">→</button>
+  <button data-key="ArrowDown" aria-label="Down">↓</button>
+</div>
 <div class="pad-buttons"><button data-key="Shift" aria-label="B, brake">B<span>Brake</span></button><button data-key="Space" aria-label="A, shoot"><b>A</b><span id="a-label">Shoot</span></button></div></div><button id="music" aria-pressed="true">Music on</button><a href="https://tennesseekaplan.github.io/Arcade/">Arcade</a></footer>
 </main>
 <script>
@@ -41,7 +52,6 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 const $=id=>document.getElementById(id), ctx=$('screen').getContext('2d');
 const W=384,H=216,startDriveY=166, aimHeight=6;
 ctx.scale(2,2);
-let stickX=0, stickY=0, stickPointer=null;
 const keys=new Set(), touches=new Map(), configs=[
  {cars:3,foes:1,fire:2.2,chase:15,gap:1.12},
  {cars:4,foes:2,fire:1.75,chase:18,gap:.94},
@@ -60,6 +70,7 @@ function scene(next){phase=next;
  const driving=next==='drive'||next==='driveRetry';
  $('a-label').textContent=driving?'Gas':'Shoot';
  $('a-label').closest('button').setAttribute('aria-label',driving?'A, gas':'A, shoot');
+ touches.clear();
  sceneAt=performance.now();$('overlay').hidden=true;if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();}
 function modal(title,body,button,action){$('heading').textContent=title;$('message').textContent=body;$('action').textContent=button;$('action').onclick=action;$('overlay').hidden=false;}
 function startRun(){enableMusic();level=0;retries=0;start=performance.now();finish=null;$('copy').hidden=true;scene('safe');}
@@ -80,9 +91,12 @@ function setupCar(index,hp=3){
 }
 const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
 const atCover=(x,y,pad=0)=>cover.some(r=>x>r.x-pad&&x<r.x+r.w+pad&&y>r.y-pad&&y<r.y+r.h+pad);
+const directions={ArrowUp:[0,-1],ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowDown:[0,1]};
 function movement(){
- const x=Number(down('ArrowRight'))-Number(down('ArrowLeft'))+stickX;
- const y=Number(down('ArrowDown'))-Number(down('ArrowUp'))+stickY;
+ const mobileDirection=[...touches.values()].findLast(key=>directions[key]);
+ if(mobileDirection)return directions[mobileDirection];
+ const x=Number(down('ArrowRight'))-Number(down('ArrowLeft'));
+ const y=Number(down('ArrowDown'))-Number(down('ArrowUp'));
  const length=Math.max(1,Math.hypot(x,y));
  return [x/length,y/length];
 }
@@ -564,36 +578,20 @@ document.addEventListener('keydown',e=>{
  }
 });
 document.addEventListener('keyup',e=>keys.delete(e.code));
-const stick=$('stick');
-function moveStick(event){
- if(event.pointerId!==stickPointer)return;
- const bounds=stick.getBoundingClientRect();
- const x=event.clientX-bounds.left-bounds.width/2;
- const y=event.clientY-bounds.top-bounds.height/2;
- const distance=Math.hypot(x,y);
- const scale=distance>6?Math.min(1,(distance-6)/23)/distance:0;
- stickX=x*scale;stickY=y*scale;
- stick.style.setProperty('--stick-x',stickX*23+'px');
- stick.style.setProperty('--stick-y',stickY*23+'px');
-}
-function resetStick(){
- stickPointer=null;stickX=0;stickY=0;
- stick.style.removeProperty('--stick-x');stick.style.removeProperty('--stick-y');
-}
-stick.onpointerdown=event=>{
- if(stickPointer!==null)return;
- event.preventDefault();
- stickPointer=event.pointerId;stick.setPointerCapture(event.pointerId);
- moveStick(event);
-};
-stick.onpointermove=moveStick;
-for(const type of ['pointerup','pointercancel','lostpointercapture']){
- stick.addEventListener(type,event=>{if(event.pointerId===stickPointer)resetStick();});
-}
-window.addEventListener('blur',()=>{keys.clear();touches.clear();resetStick();});
-for(const b of document.querySelectorAll('[data-key]')){
- b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);touches.set(e.pointerId,b.dataset.key);};
- for(const type of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(type,e=>touches.delete(e.pointerId));
+window.addEventListener('blur',()=>{keys.clear();touches.clear();});
+for(const button of document.querySelectorAll('[data-key]')){
+ button.onpointerdown=event=>{
+  event.preventDefault();
+  button.setPointerCapture(event.pointerId);
+  const key=button.dataset.key;
+  touches.set(event.pointerId,key);
+  if(phase==='train'&&directions[key]){
+   [jack.dx,jack.dy]=directions[key];
+  }
+ };
+ for(const type of ['pointerup','pointercancel','lostpointercapture']){
+  button.addEventListener(type,event=>touches.delete(event.pointerId));
+ }
 }
 function frame(t){now=t;const dt=Math.max(0,Math.min(.035,(t-previous)/1000));previous=t;update(dt);drawing();scheduleMusic();$('clock').textContent=time(elapsed());$('status').textContent='Best time '+(best===null?'—':time(best))+(start!==null?' · Retries '+retries:'');requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
