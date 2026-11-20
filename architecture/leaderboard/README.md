@@ -8,3 +8,7 @@ The game stays on GitHub Pages. The leaderboard needs a Supabase project.
 4. Verify that a completed run posts once and appears in the top ten on another device.
 
 Scores are browser-reported. The endpoint validates shape and plausible time bounds, and retries reuse the same run ID. Public writes should have hosting-side rate limits before opening a board to broad traffic. Never put the service role credential in the game.
+
+## Restoring the game integration
+
+The leaderboard has been removed from the live game. The original frontend integration is preserved in [the leaderboard commit](https://github.com/TennesseeKaplan/Arcade/commit/9bdd8098a1852283a8eacfe50b9d7e54a7eb4db3). Restore its leaderboard UI and API calls before configuring the public function URL.

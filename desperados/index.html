@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Desperados — Jack and Danny</title>
-<meta name="desperados-leaderboard" content="">
 <link rel="stylesheet" href="../shared/player/controller.css">
 <style>
 *{box-sizing:border-box}body{margin:0;background:#201722;color:#fff0ce;font:16px system-ui}main{max-width:860px;margin:auto;padding:12px}
@@ -29,13 +28,7 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 }
 #results {padding:clamp(12px,4vw,32px);border:1px solid #957050;background:#2b202c}
 #results h2 {color:#ffcb80}
-#result-details,#score-status,#score-message {color:#f0cfac}
-#score-form {display:flex;flex-wrap:wrap;align-items:end;gap:8px;margin:12px 0}
-#score-form label {display:grid;gap:4px}
-#nickname {min-height:43px;width:min(100%,15rem);padding:8px;background:#201722;color:#fff0ce;border:1px solid #957050;border-radius:4px;font:inherit}
-#ranking {padding-left:1.8rem}
-#ranking li {padding:4px 0;border-bottom:1px solid #594052}
-#ranking strong {float:right;font-variant-numeric:tabular-nums}
+#result-details {color:#f0cfac}
 </style><link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
 </head><body><main>
@@ -45,14 +38,6 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 <section id="results" aria-labelledby="result-title" hidden>
   <h2 id="result-title" tabindex="-1"></h2>
   <p id="result-details"></p>
-  <h3>Fastest getaways</h3>
-  <p id="score-status" role="status"></p>
-  <ol id="ranking"></ol>
-  <form id="score-form">
-    <label for="nickname">Nickname <input id="nickname" maxlength="24" autocomplete="off" required></label>
-    <button id="post-score" type="submit">Post time</button>
-  </form>
-  <p id="score-message" role="status"></p>
   <button id="run-again" type="button">Run again</button>
   <button id="copy" type="button">Copy time</button>
   <span id="copy-status" role="status"></span>
@@ -88,12 +73,9 @@ function scene(next){phase=next;
  sceneAt=performance.now();$('overlay').hidden=true;if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();}
 function modal(title,body,button,action){$('heading').textContent=title;$('message').textContent=body;$('action').textContent=button;$('action').onclick=action;$('overlay').hidden=false;}
 function startRun(){
- boardRequest?.abort();
  $('results').hidden=true;
  $('frame').hidden=false;
  $('copy-status').textContent='';
- runId=globalThis.crypto?.randomUUID?.() ?? null;
- posted=false;
  enableMusic();level=0;retries=0;start=performance.now();finish=null;scene('safe');
 }
 function setupCar(index,hp=3){
@@ -577,84 +559,17 @@ $('music').onclick=()=>{
  $('music').blur();
 };
 
-const boardUrl = document.querySelector('meta[name="desperados-leaderboard"]').content.trim();
 const previewEnding = new URLSearchParams(location.search).get('preview') === 'ending';
-let runId = null;
-let boardRequest;
-let posted = false;
-
-async function refreshLeaderboard() {
-  if (!boardUrl) return;
-  const { signal } = boardRequest;
-  $('score-status').textContent = 'Loading fastest times…';
-  try {
-    const response = await fetch(boardUrl, { signal });
-    if (!response.ok) throw new Error('Leaderboard unavailable');
-    const { scores } = await response.json();
-    if (phase !== 'result' || signal.aborted) return;
-    $('ranking').replaceChildren(...scores.map(score => {
-      const row = document.createElement('li');
-      const nickname = document.createElement('span');
-      const result = document.createElement('strong');
-      nickname.textContent = score.nickname;
-      result.textContent = time(score.time_ms);
-      row.append(nickname, result);
-      return row;
-    }));
-    $('score-status').textContent = scores.length ? '' : 'No times posted yet.';
-  } catch (error) {
-    if (!signal.aborted) $('score-status').textContent = 'Couldn’t load the leaderboard.';
-  }
-}
 
 function showResults() {
   scene('result');
   $('frame').hidden = true;
   $('results').hidden = false;
   $('result-title').textContent = previewEnding ? 'Ending preview' : 'Escaped in ' + time(elapsed());
-  $('result-details').textContent = previewEnding
-    ? 'Play a full run to post a time.'
-    : 'Best this visit ' + time(best) + ' · ' + retries + ' retries';
+  $('result-details').textContent = previewEnding ? '' : 'Best this visit ' + time(best) + ' · ' + retries + ' retries';
   $('copy').hidden = previewEnding;
-  $('ranking').replaceChildren();
-  $('score-status').textContent = boardUrl ? '' : 'Online scores are available once the leaderboard is connected.';
-  $('nickname').disabled = $('post-score').disabled = previewEnding || !boardUrl || !runId;
-  $('score-message').textContent = '';
-  $('score-form').reset();
-  boardRequest = new AbortController();
-  refreshLeaderboard();
   $('result-title').focus({ preventScroll: true });
 }
-
-$('score-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  if (previewEnding || phase !== 'result' || !runId || !boardUrl || posted || $('post-score').disabled) return;
-  const nickname = $('nickname').value.trim();
-  if (!nickname) {
-    $('score-message').textContent = 'Enter a nickname.';
-    return;
-  }
-  const { signal } = boardRequest;
-  $('post-score').disabled = true;
-  $('score-message').textContent = 'Posting…';
-  try {
-    const response = await fetch(boardUrl, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal,
-      body: JSON.stringify({ runId, nickname, timeMs: Math.floor(elapsed()) }),
-    });
-    const result = await response.json();
-    if (!response.ok || !result.saved) throw new Error(result.error || 'Couldn’t post this time.');
-    if (signal.aborted) return;
-    posted = true;
-    $('score-message').textContent = 'Time posted.';
-    $('nickname').disabled = true;
-    await refreshLeaderboard();
-  } catch (error) {
-    if (signal.aborted) return;
-    $('score-message').textContent = error.message;
-    $('post-score').disabled = false;
-  }
-});
 
 $('run-again').addEventListener('click', () => {
   if (previewEnding) {

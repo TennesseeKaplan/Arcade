@@ -12,7 +12,9 @@ Add the shared page module to each game’s HTML. This path assumes the page is 
 
 Initialize a new run when the page loads and keep gameplay state in memory. The shared module reloads a game if Back or Forward restores it from the browser’s back-forward cache. Switching tabs does not end a visit. Save preferences such as mute separately from run state.
 
-## Hosted leaderboard design
+## Archived hosted leaderboard design
+
+The [leaderboard archive](architecture/leaderboard/) contains the backend and deployment instructions. Live Desperados shows the finish result without an online leaderboard.
 
 GitHub Pages serves the game and leaderboard interface. A separate hosted API and database would accept finished scores and return per-game rankings. Games would submit a nickname and a completed result only when the player chooses to post it. Leaderboard entries are independent of the current run.
 
