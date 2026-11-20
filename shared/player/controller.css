@@ -1,0 +1,50 @@
+.arcade-touch-surface, .arcade-controller, .arcade-controller button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.arcade-touch-surface, .arcade-controller {
+  touch-action: manipulation;
+}
+.arcade-controller {
+  display: none;
+  width: 100%;
+  gap: 5px;
+  align-items: center;
+  justify-content: space-between;
+}
+@media (any-pointer: coarse) {
+  .arcade-controller { display: flex; }
+}
+.arcade-controller button {
+  touch-action: none;
+  pointer-events: auto;
+}
+.arcade-dpad {
+  display: grid;
+  grid-template: repeat(3, 44px) / repeat(3, 44px);
+  gap: 1px;
+  pointer-events: auto;
+}
+.arcade-dpad button { padding: 0; font-size: 1.3rem; }
+.arcade-dpad [data-direction="up"] { grid-area: 1 / 2; }
+.arcade-dpad [data-direction="left"] { grid-area: 2 / 1; }
+.arcade-dpad [data-direction="right"] { grid-area: 2 / 3; }
+.arcade-dpad [data-direction="down"] { grid-area: 3 / 2; }
+.arcade-dpad::after {
+  content: '';
+  grid-area: 2 / 2;
+  background: var(--arcade-dpad-center, #302333);
+  border-radius: 8px;
+  pointer-events: none;
+}
+.arcade-action-buttons { display: flex; gap: 8px; }
+.arcade-action-buttons[hidden] { display: none; }
+.arcade-action-buttons button {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  padding: 0;
+  font: bold 1rem system-ui;
+}
+.arcade-action-buttons button span { display: block; font-size: .66rem; }
