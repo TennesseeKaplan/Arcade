@@ -154,6 +154,14 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .chips .bet-chip { inline-size: 44px; }
 }
 
+[hidden] { display: none !important; }
+#split-hands { display: grid; gap: 5px; }
+.split-hand { padding: 5px; border: 1px solid transparent; }
+.split-hand.current { border-color: #e9bd75; border-radius: 4px; }
+.split-hand h3 { margin: 0 0 4px; text-align: center; font-size: .74rem; }
+.split-hand .cards { min-height: 0; }
+@media (min-width: 640px) { #split-hands { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
 .playing-card {
   --card-cream: #fff0ce;
   --card-ink: #263b32;
@@ -315,7 +323,7 @@ button.bet-chip { cursor: pointer; }
     <a class="arcade" href="https://tennesseekaplan.github.io/Arcade/">← Arcade</a>
     <details class="rules">
       <summary>Rules</summary>
-      <div class="rule-sheet"><p>Get closer to 21 than Chase without going over. Aces count as 1 or 11. Chase stands on all 17s. Blackjack pays 3:2. Ties return your bet. Double on your first two cards to double the bet and draw one last card.</p>
+      <div class="rule-sheet"><p>Get closer to 21 than Chase without going over. Aces count as 1 or 11. Chase stands on all 17s. Blackjack pays 3:2. Ties return your bet. Double on your first two cards to double the bet and draw one last card. Split one matching pair by matching your bet. Split aces get one card each.</p>
       <button id="reset" type="button">Reset to 500 chips</button></div>
     </details>
     <button id="sound" class="utility" type="button" aria-pressed="true">Enable sound</button>
@@ -345,6 +353,10 @@ button.bet-chip { cursor: pointer; }
         <section class="hand" aria-labelledby="player-label">
           <h2 id="player-label">You <output id="player-total"></output></h2>
           <div id="player-cards" class="cards"></div>
+          <div id="split-hands" hidden>
+            <div class="split-hand"><h3 id="first-total"></h3><div id="first-cards" class="cards"></div></div>
+            <div class="split-hand"><h3 id="second-total"></h3><div id="second-cards" class="cards"></div></div>
+          </div>
         </section>
       </div>
     </div>
@@ -363,6 +375,7 @@ button.bet-chip { cursor: pointer; }
         <button id="deal" type="button">Deal <kbd>D</kbd></button>
         <button id="hit" type="button" disabled>Hit <kbd>H</kbd></button>
         <button id="stand" type="button" disabled>Stand <kbd>S</kbd></button>
+        <button id="split" type="button" hidden>Split <kbd>P</kbd></button>
         <button id="double" type="button" disabled>Double <kbd>X</kbd></button>
       </div>
     </div>
@@ -488,10 +501,56 @@ const BlackjackEngine = (() => {
     if (typeof random !== 'function') throw new TypeError('Provide a random number function.');
     let round = cleanRound(toCents(bankroll));
 
+    function canSplit(round) {
+      return round.phase === 'player' && !round.hands && round.player.length === 2 &&
+        round.player[0].rank === round.player[1].rank && round.bankroll >= round.wager;
+    }
+
+    function finishSplit(next) {
+      let dealer = handValue(next.dealer);
+      if (next.hands.some(hand => !handValue(hand.cards).bust)) {
+        while (dealer.total < 17) {
+          draw(next, next.dealer);
+          dealer = handValue(next.dealer);
+        }
+      }
+      let payout = 0;
+      for (const hand of next.hands) {
+        const value = handValue(hand.cards);
+        hand.outcome = value.bust ? 'lose' : dealer.bust || value.total > dealer.total ? 'win'
+          : value.total === dealer.total ? 'push' : 'lose';
+        payout += hand.outcome === 'win' ? 2 * hand.stake : hand.outcome === 'push' ? hand.stake : 0;
+      }
+      settle(next, payout > next.wager ? 'win' : payout < next.wager ? 'lose' : 'push', 'split', payout);
+    }
+
+    function completeHand(next) {
+      if (!next.hands) return finish(next);
+      if (next.activeHand === 0 && handValue(next.hands[1].cards).total !== 21) next.activeHand = 1;
+      else finishSplit(next);
+    }
+
+    function split() {
+      return playerAction('split', next => {
+        if (!canSplit(next)) throw new RangeError('Splitting requires a matching pair and another bet.');
+        next.hands = next.player.map(card => ({ cards: [card], stake: next.wager, outcome: null }));
+        next.activeHand = 0;
+        next.bankroll -= next.wager;
+        next.wager *= 2;
+        for (const hand of next.hands) draw(next, hand.cards);
+        if (next.player[0].rank === 'A') finishSplit(next);
+        else if (handValue(next.hands[0].cards).total === 21) completeHand(next);
+      });
+    }
+
     function view() {
       const inPlay = round.phase === 'player';
       const dealerRevealed = round.phase === 'settled';
+      const active = round.hands?.[round.activeHand];
       return {
+        hands: round.hands?.map(hand => ({cards: hand.cards.map(copyCard), total: handValue(hand.cards).total, outcome: hand.outcome})) ?? null,
+        activeHand: inPlay ? round.activeHand : null,
+        canSplit: canSplit(round),
         bankroll: round.bankroll / 100,
         phase: round.phase,
         player: round.player.map(copyCard),
@@ -506,7 +565,7 @@ const BlackjackEngine = (() => {
         reason: round.reason,
         canHit: inPlay,
         canStand: inPlay,
-        canDouble: inPlay && round.player.length === 2 && round.bankroll >= round.wager
+        canDouble: inPlay && (active?.cards ?? round.player).length === 2 && round.bankroll >= (active?.stake ?? round.wager)
       };
     }
 
@@ -536,6 +595,7 @@ const BlackjackEngine = (() => {
     function playerAction(name, action) {
       if (round.phase !== 'player') throw new Error('Deal a hand before taking an action.');
       const next = { ...round, player: [...round.player], dealer: [...round.dealer] };
+      if (round.hands) next.hands = round.hands.map(hand => ({...hand, cards: [...hand.cards]}));
       action(next);
       next.actions = [...round.actions, name];
       round = next;
@@ -544,24 +604,29 @@ const BlackjackEngine = (() => {
 
     function hit() {
       return playerAction('hit', next => {
-        draw(next, next.player);
-        if (handValue(next.player).total >= 21) finish(next);
+        const cards = next.hands?.[next.activeHand].cards ?? next.player;
+        draw(next, cards);
+        if (handValue(cards).total >= 21) completeHand(next);
       });
     }
 
     function stand() {
-      return playerAction('stand', finish);
+      return playerAction('stand', completeHand);
     }
 
     function double() {
       return playerAction('double', next => {
-        if (next.player.length !== 2 || next.bankroll < next.wager) {
+        const hand = next.hands?.[next.activeHand];
+        const cards = hand?.cards ?? next.player;
+        const stake = hand?.stake ?? next.wager;
+        if (cards.length !== 2 || next.bankroll < stake) {
           throw new RangeError('Double on your first two cards if you can match the bet.');
         }
-        next.bankroll -= next.wager;
-        next.wager *= 2;
-        draw(next, next.player);
-        finish(next);
+        next.bankroll -= stake;
+        next.wager += stake;
+        if (hand) hand.stake += stake;
+        draw(next, cards);
+        completeHand(next);
       });
     }
 
@@ -594,12 +659,13 @@ const BlackjackEngine = (() => {
           if (name === 'hit') hit();
           else if (name === 'stand') stand();
           else if (name === 'double') double();
+          else if (name === 'split') split();
           else throw new Error('The saved blackjack action is invalid.');
         }
       }
     }
 
-    return { deal, hit, stand, double, reset, view, snapshot };
+    return { deal, hit, stand, double, split, reset, view, snapshot };
   }
 
   return { createTable, handValue };
@@ -791,6 +857,7 @@ function createChaseMusic(audioContext) {
   const chips = [...document.querySelectorAll('[data-value]')];
   const suits = {'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'};
   const remarks = {
+    split: ['Split hands settled.', '“Two hands, one table.”'],
     'player-blackjack': ['Blackjack pays 3:2.', '“Twenty-one on the deal? Nice.”'],
     'dealer-blackjack': ['Chase has blackjack.', '“House had it all along.”'],
     'both-blackjack': ['Two blackjacks. Push.', '“Great minds.”'],
@@ -888,7 +955,21 @@ function createChaseMusic(audioContext) {
     $('dealer-total').textContent = v.dealer.length ? format.format((v.dealerRevealed ? v.dealerValue : v.dealerVisibleValue).total) : '';
     $('player-total').textContent = v.player.length ? format.format(v.playerValue.total) : '';
     renderHand('dealer-cards',v.dealer,!v.dealerRevealed);
-    renderHand('player-cards',v.player,false);
+    $('player-total').hidden = Boolean(v.hands);
+    $('player-cards').hidden = Boolean(v.hands);
+    $('split-hands').hidden = !v.hands;
+    if (v.hands) {
+      for (const [i, hand] of v.hands.entries()) {
+        const id = i === 0 ? 'first' : 'second';
+        const label = $('' + id + '-total');
+        const outcome = { win: 'Won', lose: 'Lost', push: 'Push' }[hand.outcome];
+        label.textContent = 'Hand ' + (i + 1) + ' · ' + hand.total + (outcome ? ' · ' + outcome : '');
+        label.parentElement.classList.toggle('current', v.activeHand === i);
+        renderHand(id + '-cards', hand.cards, false);
+      }
+    } else renderHand('player-cards',v.player,false);
+    $('split').hidden = !v.canSplit;
+    $('split').disabled = !v.canSplit;
     for (const chip of chips) chip.disabled = active || bet + Number(chip.dataset.value) > v.bankroll;
     $('clear').disabled = active || bet <= 0;
     $('deal').disabled = active || bet <= 0 || bet > v.bankroll;
@@ -903,7 +984,7 @@ function createChaseMusic(audioContext) {
       $('result').dataset.tone = net > 0 ? 'win' : net < 0 ? 'loss' : '';
       $('chase-line').textContent = line;
     } else {
-      $('result').textContent = active ? 'Your move.' : 'Choose your bet, then deal.';
+      $('result').textContent = active ? (v.hands ? 'Play hand ' + (v.activeHand + 1) + ' of 2.' : 'Your move.') : 'Choose your bet, then deal.';
       $('chase-line').textContent = active ? '“What’s it gonna be?”' : '“Pull up a chair.”';
     }
     if (!active && v.bankroll === 0) {
@@ -973,7 +1054,7 @@ function createChaseMusic(audioContext) {
     ping([490]);render();
   });
   $('clear').addEventListener('click',()=>{bet=0; render();});
-  for (const id of ['deal','hit','stand','double']) $(id).addEventListener('click',()=>play(id));
+  for (const id of ['deal','hit','stand','double','split']) $(id).addEventListener('click',()=>play(id));
   $('reset').addEventListener('click',()=>{
     table.reset();bet=10;document.querySelector('.rules').open=false;render();
   });
@@ -993,7 +1074,7 @@ function createChaseMusic(audioContext) {
   });
   document.addEventListener('keydown', event=>{
     if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || document.querySelector('.rules').open) return;
-    const id={KeyD:'deal',KeyH:'hit',KeyS:'stand',KeyX:'double'}[event.code];
+    const id={KeyD:'deal',KeyH:'hit',KeyS:'stand',KeyX:'double',KeyP:'split'}[event.code];
     if (id) { event.preventDefault(); play(id); }
   });
   syncSound();
