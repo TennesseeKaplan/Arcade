@@ -26,20 +26,48 @@ a{color:#aee1ba;text-underline-offset:.2em}
 @keyframes drop-jaw{0%,100%{transform:translateY(0)}38%{transform:translateY(10px)}68%{transform:translateY(6px)}}
 .header-controls{display:flex;align-items:center;gap:.8rem}
 #mute{min-width:5.7rem;white-space:nowrap}
-.scene.sleep .portrait{animation:drowse .6s ease-in-out both}
-@keyframes drowse{45%{transform:translateY(2%) scale(1.03);filter:brightness(.65)}}
+.scene::after {
+  content:'';position:absolute;inset:0;pointer-events:none;opacity:0;
+  background:radial-gradient(ellipse at 50% 40%,transparent 25%,#7ff5ac66 39%,transparent 58%);
+  mix-blend-mode:screen;
+}
+.scene.pulse::after{animation:mist-ripple .85s ease-out}
+@keyframes mist-ripple {
+  from{opacity:.7;transform:scale(.58)}
+  to{opacity:0;transform:scale(1.48)}
+}
+#head-dim{opacity:0}
+.scene.sleep #head-dim{animation:drowse .58s ease-in-out}
+@keyframes drowse{46%{opacity:.66}82%{opacity:.13}}
 .console{padding:clamp(1rem,3vw,1.65rem);border:1px solid #426755;border-top:0;border-radius:0 0 1.2rem 1.2rem;background:#14251f}
 label{display:block;margin-bottom:.4rem;color:#dbe5cc}
 .ask-row{display:flex;gap:.6rem}
 input{min-width:0;flex:1;background:#071510;color:#fff;border:1px solid #63785f;border-radius:.45rem;padding:.7rem;font:inherit;-webkit-user-select:text;user-select:text}
 button{min-height:44px;background:#c2e5a8;color:#102018;border:0;border-radius:.45rem;padding:.55rem 1rem;font:700 1rem system-ui;cursor:pointer}
+#ask{box-shadow:0 4px 0 #456045;transition:box-shadow .18s,transform .14s,background-color .18s}
+#oracle.ready #ask{background:#d1efa9;box-shadow:0 4px 0 #456045,0 0 1rem #b2f79566}
+#ask:active,#oracle.ready #ask:active{transform:translateY(3px);box-shadow:0 1px 0 #456045}
+#answer.lit{animation:answer-light .52s ease-out}
+@keyframes answer-light {
+  from{text-shadow:0 0 1.25rem #ffc979cc;color:#fff3cb}
+  to{text-shadow:0 0 .25rem #ffc97900}
+}
+#video:not([hidden]) #load-video{animation:marquee-light .75s ease-out}
+@keyframes marquee-light {
+  from{box-shadow:0 0 1.1rem #ffc979bb,inset 0 0 .55rem #ffdb86}
+  to{box-shadow:0 0 0 #ffc97900}
+}
 :focus-visible{outline:2px solid #ffdb86;outline-offset:3px}
 #answer{font:700 clamp(1.25rem,3vw,1.85rem)/1.25 Georgia,serif;color:#f7e4b8;margin:1rem 0 0;min-height:1.3em}
 #video{margin-top:1rem}
 #video a{display:inline-block;margin-top:.7rem}
 iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
 @media(max-width:560px){main{width:min(100% - 1rem,58rem)}header{align-items:center}.header-controls{gap:.5rem}#mute{min-width:4.5rem;padding:.55rem .65rem}}
-@media(prefers-reduced-motion:reduce){.scene.sleep .portrait{animation:none}}
+@media(prefers-reduced-motion:reduce){
+  .scene.pulse::after,.scene.sleep #head-dim,#answer.lit,#video:not([hidden]) #load-video{animation:none}
+  #ask{transition:none}
+  #ask:active,#oracle.ready #ask:active{transform:none}
+}
 </style>
 </head>
 <body>
@@ -49,6 +77,10 @@ iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
 <div id="scene" class="scene">
 <svg class="portrait" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A giant mustached head floating in green mist over Tallahassee and the Florida Capitol">
   <defs>
+    <radialGradient id="drowse-shadow">
+      <stop offset="0" stop-color="#040e19"/>
+      <stop offset="1" stop-color="#040e19" stop-opacity="0"/>
+    </radialGradient>
     <clipPath id="jaw-mask"><path d="M263 212 Q293 205 325 213 L324 225 Q294 236 265 224Z"/></clipPath>
   </defs>
   <image href="oracle.webp" width="600" height="400"/>
@@ -56,12 +88,13 @@ iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
     <path id="mouth-opening" d="M264 210 Q293 203 324 211 Q312 228 293 229 Q274 226 264 210Z" fill="#3b1c20"/>
     <g id="jaw"><image href="oracle.webp" width="600" height="400" clip-path="url(#jaw-mask)"/></g>
   </g>
+  <ellipse id="head-dim" cx="298" cy="154" rx="112" ry="132" fill="url(#drowse-shadow)"/>
 </svg>
 </div>
 <section class="console" aria-label="Ask the oracle">
 <form id="oracle">
 <label for="question">Ask the floating head a question</label>
-<div class="ask-row"><input id="question" type="text" maxlength="500" required autocomplete="off" spellcheck="false" placeholder="What should I do?"><button type="submit">Ask</button></div>
+<div class="ask-row"><input id="question" type="text" maxlength="500" required autocomplete="off" spellcheck="false" placeholder="What should I do?"><button type="submit" id="ask">Ask</button></div>
 </form>
 <p id="answer" role="status" aria-live="polite"></p>
 <div id="video" hidden>
@@ -204,17 +237,25 @@ form.addEventListener('submit', event => {
   startTheme();
   previous = chooseAnswer(question);
   answer.textContent = answers[previous];
-  scene.classList.remove('sleep');
-  if (previous === 3) {
-    void scene.offsetWidth;
-    scene.classList.add('sleep');
-  }
+  scene.classList.remove('pulse', 'sleep');
+  answer.classList.remove('lit');
+  video.hidden = true;
+  void scene.offsetWidth;
+  scene.classList.add('pulse');
+  scene.classList.toggle('sleep', previous === 3);
+  answer.classList.add('lit');
   video.querySelector('iframe')?.remove();
   video.hidden = previous !== 4;
   loadVideo.hidden = false;
   talk();
 });
-input.addEventListener('input', () => input.setCustomValidity(''));
+function updateAsk() {
+  input.setCustomValidity('');
+  form.classList.toggle('ready', input.value.trim().length > 0);
+}
+input.addEventListener('input', updateAsk);
+window.addEventListener('pageshow', updateAsk);
+updateAsk();
 
 loadVideo.addEventListener('click', () => {
   const frame = document.createElement('iframe');
