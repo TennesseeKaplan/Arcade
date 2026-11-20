@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#21151b">
+<title>Chase's Blackjack Table</title>
+<style>
+:root {
+  color-scheme: dark;
+  color: #fff0cf;
+  background: #181116;
+  --ink: #fff0cf;
+  --gold: #efbb79;
+  --muted: #c9b79c;
+  --pixel-font: "Courier New", monospace;
+  font: 16px/1.4 system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 300px; background: radial-gradient(ellipse at 50% -8%, #40252b 0%, #22151c 42%, #171116 75%); }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+button:disabled { cursor: default; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid #fff0bc; outline-offset: 3px; }
+.cabinet { width: min(100% - 24px, 880px); margin: 0 auto; padding: 10px 0 18px; }
+.masthead { position: relative; z-index: 3; display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.arcade { margin-right: auto; text-decoration: none; color: #f3dbb3; font-weight: 750; }
+.utility, .rules summary, .rules button { padding: 5px 9px; min-height: 34px; border: 1px solid #76514c; border-radius: 3px; font-size: .78rem; font-weight: 800; background: #34242a; }
+.utility:disabled { opacity: .45; }
+.rules { position: relative; }
+.rules summary { display: grid; place-items: center; list-style: none; cursor: pointer; }
+.rules summary::-webkit-details-marker { display: none; }
+.rule-sheet { position: absolute; width: min(310px, 74vw); right: 0; top: 35px; padding: 12px; background: #30212a; border: 1px solid #99716a; box-shadow: 0 6px 22px #120c11c2; color: #ffe7bc; font-size: .86rem; }
+.rule-sheet p { margin: 0 0 9px; }
+.game { overflow: hidden; border: 2px solid #815443; border-radius: 12px 12px 6px 6px; box-shadow: 0 8px #100b0e, 0 18px 45px #120b0faa; }
+.lounge { position: relative; display: grid; grid-template-columns: 1.05fr .95fr; align-items: end; min-height: clamp(158px, 30vw, 252px); isolation: isolate; background: radial-gradient(ellipse at 70% 75%, #8b422f99, transparent 57%), repeating-linear-gradient(90deg, #5c2b37 0 18px, #582632 18px 35px, #512530 35px 37px); border-bottom: 7px solid #af7249; }
+.lounge::before { content: ""; position: absolute; inset: 13px 11px 10px; border: 1px solid #b2744b72; border-bottom: 0; pointer-events: none; }
+.marquee { position: relative; z-index: 1; padding: clamp(13px, 5vw, 31px) 0 clamp(10px, 3.7vw, 23px) clamp(15px, 6vw, 54px); }
+.marquee h1 { margin: 0; font: 900 clamp(1.65rem, 6.3vw, 3.85rem)/.86 Georgia, serif; letter-spacing: -.065em; color: #ffdba1; text-shadow: 2px 2px #341b21, 4px 4px #30191e; }
+.marquee h1 span { color: #ffe9bb; font-size: 1.055em; }
+.marquee p { margin: 11px 0 0; color: #fff0cf; font-size: clamp(.72rem, 2.4vw, .99rem); font-style: italic; min-height: 2.2em; }
+#chase { width: min(100%, 301px); height: auto; max-height: 100%; object-fit: contain; justify-self: center; align-self: end; margin-right: 8%; image-rendering: pixelated; filter: drop-shadow(4px 4px 0 #321c28); }
+.sconce { position: absolute; right: 8%; top: 14px; width: 38px; height: 54px; background: #eab074; clip-path: polygon(10% 0,90% 0,100% 12%,88% 55%,59% 57%,59% 90%,73% 90%,73% 100%,26% 100%,26% 90%,41% 90%,41% 57%,12% 55%,0 12%); box-shadow: inset 0 -32px #a9774e; opacity: .72; }
+.sconce.left { left: 50%; right: auto; top: 18px; width: 26px; height: 37px; opacity: .32; }
+.felt { padding: 9px 11px; background: radial-gradient(ellipse at 52% 43%, #30654d 7%, #204836 72%, #173629); border-top: 3px solid #663c32; }
+.inlay { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); grid-template-areas: "dealer player" "call call"; gap: 10px; padding: 12px 9px 7px; border: 1px solid #c7ad737d; border-radius: 38px 38px 18px 18px; min-height: 188px; }
+.hand:first-child { grid-area: dealer; }
+.hand:last-child { grid-area: player; }
+.hand + .hand { border-left: 1px solid #a9af7480; }
+.hand h2 { margin: 0 0 7px; text-align: center; color: #f7ddb1; font: 800 .82rem/1 var(--pixel-font); text-transform: uppercase; letter-spacing: .09em; }
+.hand output { display: inline-block; margin-left: .25rem; min-width: 1ch; color: #d7e8ad; letter-spacing: 0; }
+.cards { display: flex; flex-wrap: wrap; justify-content: center; align-items: start; gap: 4px; min-height: clamp(64px, 14vw, 110px); }
+.slot { position: relative; width: clamp(42px, 10vw, 78px); aspect-ratio: 5/7; border: 1px dashed #b7bd8d8a; border-radius: 4px; }
+.slot::after { content: "♦"; display: grid; place-items: center; height: 100%; color: #b7bd8d65; }
+.call { grid-area: call; min-height: 34px; display: grid; place-items: center; text-align: center; padding: 4px 7px; background: #163529; color: #ffe9bf; border: 1px solid #6d8766; border-radius: 2px; font-weight: 750; font-size: clamp(.77rem, 2.3vw, .95rem); }
+.call[data-tone=win] { background: #253f2c; color: #e8f5b5; border-color: #b3bd73; }
+.call[data-tone=loss] { background: #542e35; border-color: #a36b60; }
+.control-deck { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px; padding: 11px clamp(9px, 3vw, 19px) 14px; background: #37282b; border-top: 3px solid #ac754f; }
+.wager { display: grid; gap: 7px; }
+.scores { display: flex; gap: 10px; margin: 0; }
+.scores > div { display: flex; gap: 8px; align-items: center; padding-right: 8px; border-right: 1px solid #785948; }
+.scores dt { color: #e0bda0; font-size: .77rem; }
+.scores dd { margin: 0; color: #ffe8b7; font: 800 1.03rem/1 var(--pixel-font); font-variant-numeric: tabular-nums; }
+.chips, .actions { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.actions { align-self: end; }
+.actions button { min-height: 44px; padding: 5px 11px; background: #583c41; border: 1px solid #a87866; border-radius: 3px; box-shadow: 0 3px #21171f; font-weight: 800; font-size: .84rem; white-space: nowrap; }
+.actions button#deal { background: #e9bd75; border-color: #ffe0a3; color: #382720; }
+.actions button:disabled { opacity: .4; }
+.actions button:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px #21171f; }
+.actions kbd { font-size: .7em; opacity: .74; }
+@media (any-pointer: coarse) { .actions kbd { display: none; } }
+@media (max-width: 500px) {
+  .cabinet { width: calc(100% - 14px); }
+  .lounge { grid-template-columns: .92fr 1.08fr; }
+  #chase { margin-right: 5%; }
+  .sconce { right: 4%; top: 7px; opacity: .38; }
+  .control-deck { gap: 9px; }
+  .actions { width: 100%; }
+  .actions button { flex: 1; padding: 4px 6px; }
+  .felt { padding: 6px; }
+  .inlay { padding: 8px 4px 5px; min-height: 144px; gap: 7px; }
+}
+
+.playing-card {
+  --card-cream: #fff0ce;
+  --card-ink: #263b32;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: clamp(42px, 10vw, 78px);
+  aspect-ratio: 5 / 7;
+  color: var(--card-ink);
+  background: var(--card-cream);
+  border: 1px solid #83654c;
+  border-radius: 4px;
+  box-shadow: 0 3px #221914, inset 0 0 0 2px #fef8e5, inset 0 -4px #e3c798;
+  font-family: var(--pixel-font, 'Courier New', monospace);
+  font-weight: 800;
+  vertical-align: middle;
+  overflow: hidden;
+  user-select: none;
+  animation: card-deal 150ms ease-out both;
+}
+.playing-card.red { --card-ink: #a12937; }
+.card-rank,
+.card-suit {
+  position: absolute;
+  inset-inline-start: 4px;
+  min-inline-size: 1ch;
+  text-align: center;
+  line-height: .96;
+}
+.card-rank {
+  inset-block-start: 5px;
+  font-size: clamp(11px, 2.6vw, 19px);
+  letter-spacing: -.12em;
+}
+.card-suit {
+  inset-block-start: clamp(16px, 3.9vw, 25px);
+  font: 700 clamp(9px, 2.4vw, 15px)/1 system-ui, sans-serif;
+}
+.card-pip {
+  display: grid;
+  place-items: center;
+  inline-size: 61%;
+  aspect-ratio: 1;
+  margin: 3px 0 0 3px;
+  background: #e7c99e47;
+  clip-path: polygon(16% 0,84% 0,84% 8%,100% 8%,100% 92%,84% 92%,84% 100%,16% 100%,16% 92%,0 92%,0 8%,16% 8%);
+  font: 700 clamp(20px, 5.1vw, 40px)/1 system-ui, sans-serif;
+}
+.playing-card[data-rank]:not(.card-back)::after {
+  content: attr(data-rank);
+  position: absolute;
+  inset-inline-end: 4px;
+  inset-block-end: 5px;
+  transform: rotate(180deg);
+  font-size: clamp(11px, 2.6vw, 19px);
+  line-height: .96;
+  letter-spacing: -.12em;
+}
+.playing-card.card-back {
+  background: #732e42;
+  border-color: #e3bc7c;
+  box-shadow: 0 3px #221914, inset 0 0 0 2px #44222a;
+}
+.card-back .card-rank,
+.card-back .card-suit,
+.card-back .card-pip { visibility: hidden; }
+.playing-card.card-back::before,
+.playing-card.card-back::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+}
+.playing-card.card-back::before {
+  inset: 5px;
+  border: 1px solid #cfac6d;
+  background:
+    repeating-conic-gradient(from 45deg, #a64453 0% 25%, #622638 25% 50%) center / 7px 7px;
+  box-shadow: inset 0 0 0 2px #692d3c;
+}
+.playing-card.card-back::after {
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  inline-size: 33%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(45deg);
+  background: #debb74;
+  border: 2px solid #532538;
+  box-shadow: 0 0 0 1px #e8c988, inset 0 0 0 2px #b97e57;
+}
+.playing-card.is-revealed,
+.playing-card.card-reveal { animation: card-reveal 230ms ease-out both; }
+@keyframes card-deal {
+  from { opacity: .5; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes card-reveal {
+  from { opacity: .5; transform: scaleX(.82); }
+  to { opacity: 1; transform: scaleX(1); }
+}
+
+.bet-chip {
+  --chip-dark: #693448;
+  --chip-face: #a8545c;
+  --chip-tick: #f0d091;
+  box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: clamp(47px, 10vw, 62px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid #e3bb79;
+  border-radius: 50%;
+  color: #fff0cf;
+  background: repeating-conic-gradient(var(--chip-tick) 0deg 11deg, var(--chip-dark) 11deg 60deg);
+  box-shadow: 0 3px #221b17, inset 0 0 0 1px #1d191766;
+  font: 800 clamp(12px, 2.8vw, 15px)/1 var(--pixel-font, 'Courier New', monospace);
+  white-space: nowrap;
+  text-shadow: 0 1px #211815;
+  touch-action: manipulation;
+}
+.bet-chip::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 13%;
+  border: 1px solid #f3dab0;
+  border-radius: 50%;
+  background: var(--chip-face);
+  box-shadow: inset 0 0 0 2px var(--chip-dark);
+}
+.bet-chip[data-value="1"] { --chip-dark: #4a5147; --chip-face: #697361; }
+.bet-chip[data-value="5"] { --chip-dark: #723a48; --chip-face: #9d4e55; }
+.bet-chip[data-value="10"] { --chip-dark: #6b442d; --chip-face: #a36739; }
+.bet-chip[data-value="25"] { --chip-dark: #294c42; --chip-face: #4b7256; }
+.bet-chip[data-value="50"] { --chip-dark: #574066; --chip-face: #795889; }
+.bet-chip[data-value="100"] { --chip-dark: #55452d; --chip-face: #8c672f; }
+.bet-chip[data-value="500"] { --chip-dark: #293b55; --chip-face: #485a83; }
+button.bet-chip { cursor: pointer; }
+.bet-chip:focus-visible { outline: 2px solid #fff3c4; outline-offset: 4px; }
+.bet-chip:not(:disabled):active { transform: translateY(2px); box-shadow: 0 1px #221b17; }
+.bet-chip[aria-pressed="true"],
+.bet-chip.is-selected { outline: 2px solid #f0cb85; outline-offset: 3px; }
+.bet-chip:disabled { opacity: .48; cursor: default; }
+
+@media (prefers-reduced-motion: reduce) {
+  .playing-card { animation: none !important; }
+}
+
+</style>
+</head>
+<body>
+<main class="cabinet">
+  <header class="masthead">
+    <a class="arcade" href="https://tennesseekaplan.github.io/Arcade/">← Arcade</a>
+    <details class="rules">
+      <summary>Rules</summary>
+      <div class="rule-sheet"><p>Get closer to 21 than Chase without going over. Aces count as 1 or 11. Chase stands on all 17s. Blackjack pays 3:2. Ties return your bet. Double on your first two cards to double the bet and draw one last card.</p>
+      <button id="reset" type="button">Reset to 500 chips</button></div>
+    </details>
+    <button id="sound" class="utility" type="button" aria-pressed="false">Sound off</button>
+  </header>
+  <section class="game" aria-label="Blackjack table">
+    <div class="lounge">
+      <div class="sconce left" aria-hidden="true"></div><div class="sconce right" aria-hidden="true"></div>
+      <div class="marquee">
+        <h1>Chase’s<br><span>Blackjack</span><br>Table</h1>
+        <p id="chase-line">“Pull up a chair.”</p>
+      </div>
+      <img id="chase" alt="Chase, the grinning pixel-art dealer" width="144" height="126" src="data:image/png;base64,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">
+    </div>
+    <div class="felt">
+      <div class="inlay">
+        <section class="hand" aria-labelledby="dealer-label">
+          <h2 id="dealer-label">Chase <output id="dealer-total"></output></h2>
+          <div id="dealer-cards" class="cards"></div>
+        </section>
+        <div id="result" class="call" role="status">Choose your bet, then deal.</div>
+        <section class="hand" aria-labelledby="player-label">
+          <h2 id="player-label">You <output id="player-total"></output></h2>
+          <div id="player-cards" class="cards"></div>
+        </section>
+      </div>
+    </div>
+    <div class="control-deck">
+      <div class="wager">
+        <dl class="scores"><div><dt>Bankroll</dt><dd id="bankroll">500</dd></div><div><dt id="bet-label">Bet</dt><dd id="bet">10</dd></div></dl>
+        <div class="chips" aria-label="Add chips to bet">
+          <button type="button" class="bet-chip" data-value="5" aria-label="Add 5 chips">5</button>
+          <button type="button" class="bet-chip" data-value="10" aria-label="Add 10 chips">10</button>
+          <button type="button" class="bet-chip" data-value="25" aria-label="Add 25 chips">25</button>
+          <button type="button" class="bet-chip" data-value="50" aria-label="Add 50 chips">50</button>
+          <button type="button" id="clear" class="utility">Clear</button>
+        </div>
+      </div>
+      <div class="actions" aria-label="Play hand">
+        <button id="deal" type="button">Deal <kbd>D</kbd></button>
+        <button id="hit" type="button" disabled>Hit <kbd>H</kbd></button>
+        <button id="stand" type="button" disabled>Stand <kbd>S</kbd></button>
+        <button id="double" type="button" disabled>Double <kbd>X</kbd></button>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+'use strict';
+
+const BlackjackEngine = (() => {
+  const ranks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  const suits = ['♠', '♥', '♦', '♣'];
+  const values = { A: 11, J: 10, Q: 10, K: 10 };
+
+  function handValue(cards) {
+    let total = 0;
+    let highAces = 0;
+    for (const { rank } of cards) {
+      total += values[rank] ?? Number(rank);
+      if (rank === 'A') highAces++;
+    }
+    while (total > 21 && highAces > 0) {
+      total -= 10;
+      highAces--;
+    }
+    return {
+      total,
+      soft: highAces > 0,
+      blackjack: total === 21 && cards.length === 2,
+      bust: total > 21
+    };
+  }
+
+  function shuffledDeck(random) {
+    const deck = suits.flatMap(suit => ranks.map(rank => ({ rank, suit })));
+    for (let i = deck.length - 1; i > 0; i--) {
+      const value = random();
+      if (!Number.isFinite(value) || value < 0 || value >= 1) {
+        throw new RangeError('The random source must return a number from 0 up to 1.');
+      }
+      const j = Math.floor(value * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+    return deck;
+  }
+
+  function copyCard({ rank, suit }) {
+    return { rank, suit };
+  }
+
+  function readDeck(deck) {
+    if (!Array.isArray(deck) || deck.length < 4) throw new RangeError('A preset deck needs at least four cards.');
+    return deck.map(card => {
+      if (!card || !ranks.includes(card.rank) || !suits.includes(card.suit)) {
+        throw new RangeError('A preset deck contains an invalid card.');
+      }
+      return copyCard(card);
+    });
+  }
+
+  function toCents(value) {
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
+      throw new RangeError('Enter a nonnegative money amount.');
+    }
+    const scaled = value * 100;
+    const cents = Math.round(scaled);
+    if (!Number.isSafeInteger(cents) || Math.abs(scaled - cents) > 1e-6) {
+      throw new RangeError('Money amounts must be valid to the cent.');
+    }
+    return cents;
+  }
+
+  function cleanRound(bankroll) {
+    return {
+      bankroll,
+      phase: 'idle',
+      player: [],
+      dealer: [],
+      deck: [],
+      cursor: 0,
+      wager: 0,
+      entryStake: 0,
+      fundsAtDeal: bankroll,
+      actions: [],
+      payout: 0,
+      outcome: null,
+      reason: null
+    };
+  }
+
+  function draw(round, hand) {
+    const card = round.deck[round.cursor];
+    if (!card) throw new RangeError('This deck ran out of cards.');
+    round.cursor++;
+    hand.push(card);
+  }
+
+  function settle(round, outcome, reason, payout) {
+    round.phase = 'settled';
+    round.outcome = outcome;
+    round.reason = reason;
+    round.payout = payout;
+    round.bankroll += payout;
+  }
+
+  function finish(round) {
+    const player = handValue(round.player);
+    if (player.bust) {
+      settle(round, 'lose', 'player-bust', 0);
+      return;
+    }
+    let dealer = handValue(round.dealer);
+    while (dealer.total < 17) {
+      draw(round, round.dealer);
+      dealer = handValue(round.dealer);
+    }
+    if (dealer.bust) settle(round, 'win', 'dealer-bust', 2 * round.wager);
+    else if (player.total > dealer.total) settle(round, 'win', 'player-higher', 2 * round.wager);
+    else if (player.total < dealer.total) settle(round, 'lose', 'dealer-higher', 0);
+    else settle(round, 'push', 'same-total', round.wager);
+  }
+
+  function createTable({ bankroll = 500, random = Math.random, snapshot: saved } = {}) {
+    if (typeof random !== 'function') throw new TypeError('Provide a random number function.');
+    let round = cleanRound(toCents(bankroll));
+
+    function view() {
+      const inPlay = round.phase === 'player';
+      const dealerRevealed = round.phase === 'settled';
+      return {
+        bankroll: round.bankroll / 100,
+        phase: round.phase,
+        player: round.player.map(copyCard),
+        dealer: round.dealer.map(copyCard),
+        dealerRevealed,
+        playerValue: handValue(round.player),
+        dealerValue: handValue(round.dealer),
+        dealerVisibleValue: handValue(dealerRevealed ? round.dealer : round.dealer.slice(0, 1)),
+        wager: round.wager / 100,
+        payout: round.payout / 100,
+        outcome: round.outcome,
+        reason: round.reason,
+        canHit: inPlay,
+        canStand: inPlay,
+        canDouble: inPlay && round.player.length === 2 && round.bankroll >= round.wager
+      };
+    }
+
+    function deal(wager, presetDeck) {
+      if (round.phase === 'player') throw new Error('Finish this hand before dealing.');
+      const stake = toCents(wager);
+      if (stake <= 0 || stake > round.bankroll) throw new RangeError('Bet an amount covered by your bankroll.');
+      const next = cleanRound(round.bankroll - stake);
+      next.phase = 'player';
+      next.wager = stake;
+      next.entryStake = stake;
+      next.fundsAtDeal = round.bankroll;
+      next.deck = presetDeck === undefined ? shuffledDeck(random) : readDeck(presetDeck);
+      draw(next, next.player);
+      draw(next, next.dealer);
+      draw(next, next.player);
+      draw(next, next.dealer);
+      const playerNatural = handValue(next.player).blackjack;
+      const dealerNatural = handValue(next.dealer).blackjack;
+      if (playerNatural && dealerNatural) settle(next, 'push', 'both-blackjack', stake);
+      else if (playerNatural) settle(next, 'blackjack', 'player-blackjack', Math.round(2.5 * stake));
+      else if (dealerNatural) settle(next, 'lose', 'dealer-blackjack', 0);
+      round = next;
+      return view();
+    }
+
+    function playerAction(name, action) {
+      if (round.phase !== 'player') throw new Error('Deal a hand before taking an action.');
+      const next = { ...round, player: [...round.player], dealer: [...round.dealer] };
+      action(next);
+      next.actions = [...round.actions, name];
+      round = next;
+      return view();
+    }
+
+    function hit() {
+      return playerAction('hit', next => {
+        draw(next, next.player);
+        if (handValue(next.player).total >= 21) finish(next);
+      });
+    }
+
+    function stand() {
+      return playerAction('stand', finish);
+    }
+
+    function double() {
+      return playerAction('double', next => {
+        if (next.player.length !== 2 || next.bankroll < next.wager) {
+          throw new RangeError('Double on your first two cards if you can match the bet.');
+        }
+        next.bankroll -= next.wager;
+        next.wager *= 2;
+        draw(next, next.player);
+        finish(next);
+      });
+    }
+
+    function reset(newBankroll = bankroll) {
+      round = cleanRound(toCents(newBankroll));
+      return view();
+    }
+
+    function snapshot() {
+      return {
+        version: 1,
+        balance: round.fundsAtDeal / 100,
+        stake: round.entryStake / 100,
+        deck: round.deck.map(copyCard),
+        actions: [...round.actions]
+      };
+    }
+
+    if (saved !== undefined) {
+      if (!saved || saved.version !== 1 || typeof saved.balance !== 'number' ||
+        !Array.isArray(saved.actions) || !Array.isArray(saved.deck)) {
+        throw new Error('The saved blackjack game is invalid.');
+      }
+      reset(saved.balance);
+      if (saved.stake === 0) {
+        if (saved.deck.length || saved.actions.length) throw new Error('The saved blackjack game is invalid.');
+      } else {
+        deal(saved.stake, saved.deck);
+        for (const name of saved.actions) {
+          if (name === 'hit') hit();
+          else if (name === 'stand') stand();
+          else if (name === 'double') double();
+          else throw new Error('The saved blackjack action is invalid.');
+        }
+      }
+    }
+
+    return { deal, hit, stand, double, reset, view, snapshot };
+  }
+
+  return { createTable, handValue };
+})();
+
+if (typeof window !== 'undefined') window.BlackjackEngine = BlackjackEngine;
+if (typeof module !== 'undefined' && module.exports) module.exports = BlackjackEngine;
+
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const key = 'arcade-chase-blackjack-v1';
+  let table;
+  let bet = 10;
+  let audio;
+  let sound = false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(key));
+    table = BlackjackEngine.createTable(saved ? {snapshot:saved.hand} : {});
+    if (Number.isFinite(saved?.bet) && saved.bet >= 0) bet = saved.bet;
+  } catch {
+    table = BlackjackEngine.createTable();
+  }
+  const format = new Intl.NumberFormat('en', { maximumFractionDigits: 2 });
+  const chips = [...document.querySelectorAll('[data-value]')];
+  const suits = {'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'};
+  const remarks = {
+    'player-blackjack': ['Blackjack pays 3:2.', '“Twenty-one on the deal? Nice.”'],
+    'dealer-blackjack': ['Chase has blackjack.', '“House had it all along.”'],
+    'both-blackjack': ['Two blackjacks. Push.', '“Great minds.”'],
+    'player-bust': ['You went over 21.', '“One card too many.”'],
+    'dealer-bust': ['Chase went over 21.', '“Don’t tell anybody you saw that.”'],
+    'player-higher': ['Your hand beats Chase’s.', '“All right. You got me.”'],
+    'dealer-higher': ['Chase takes the hand.', '“House takes this one.”'],
+    'same-total': ['Same total. Push.', '“Take your chips back.”']
+  };
+
+  function save() {
+    try { localStorage.setItem(key, JSON.stringify({hand:table.snapshot(),bet})); } catch {}
+  }
+
+  function cardView(card, hidden) {
+    const node = document.createElement('span');
+    node.className = 'playing-card';
+    node.setAttribute('role', 'img');
+    if (hidden) {
+      node.classList.add('card-back');
+      node.setAttribute('aria-label', 'Face-down card');
+      return node;
+    }
+    node.dataset.rank = card.rank;
+    if (card.suit === '♥' || card.suit === '♦') node.classList.add('red');
+    node.setAttribute('aria-label', card.rank + ' of ' + suits[card.suit]);
+    for (const [name, text] of [['rank',card.rank],['suit',card.suit],['pip',card.suit]]) {
+      const part = document.createElement('span');
+      part.className = 'card-' + name;
+      part.textContent = text;
+      part.setAttribute('aria-hidden','true');
+      node.append(part);
+    }
+    return node;
+  }
+
+  function renderHand(id, cards, hideHole) {
+    const area = $(id);
+    const signature = JSON.stringify([cards, hideHole]);
+    if (area.dataset.hand === signature) return;
+    area.dataset.hand = signature;
+    if (!cards.length) {
+      area.replaceChildren();
+      for (let i = 0; i < 2; i++) {
+        const slot = document.createElement('span');
+        slot.className = 'slot';
+        slot.setAttribute('aria-hidden','true');
+        area.append(slot);
+      }
+      return;
+    }
+    while (area.children.length > cards.length) area.lastElementChild.remove();
+    for (const [i, card] of cards.entries()) {
+      const hidden = hideHole && i === 1;
+      const key = hidden ? 'hole' : card.rank + card.suit;
+      const existing = area.children[i];
+      if (existing?.dataset.card === key) continue;
+      const view = cardView(card, hidden);
+      view.dataset.card = key;
+      if (existing?.classList.contains('card-back') && !hidden) view.classList.add('is-revealed');
+      if (existing) existing.replaceWith(view);
+      else area.append(view);
+    }
+  }
+
+  function render() {
+    const v = table.view();
+    const active = v.phase === 'player';
+    const end = v.phase === 'settled';
+    if (!active && bet > v.bankroll) bet = v.bankroll;
+    $('bankroll').textContent = format.format(v.bankroll);
+    $('bet').textContent = format.format(active ? v.wager : bet);
+    $('dealer-total').textContent = v.dealer.length ? format.format((v.dealerRevealed ? v.dealerValue : v.dealerVisibleValue).total) : '';
+    $('player-total').textContent = v.player.length ? format.format(v.playerValue.total) : '';
+    renderHand('dealer-cards',v.dealer,!v.dealerRevealed);
+    renderHand('player-cards',v.player,false);
+    for (const chip of chips) chip.disabled = active || bet + Number(chip.dataset.value) > v.bankroll;
+    $('clear').disabled = active || bet <= 0;
+    $('deal').disabled = active || bet <= 0 || bet > v.bankroll;
+    $('hit').disabled = !v.canHit;
+    $('stand').disabled = !v.canStand;
+    $('double').disabled = !v.canDouble;
+    $('result').dataset.tone = '';
+    if (end) {
+      const [reason,line] = remarks[v.reason] || ['Hand complete.','“Deal again?”'];
+      const net = v.payout - v.wager;
+      $('result').textContent = reason + (net ? ' ' + (net > 0 ? '+' : '−') + format.format(Math.abs(net)) + ' chips' : '');
+      $('result').dataset.tone = net > 0 ? 'win' : net < 0 ? 'loss' : '';
+      $('chase-line').textContent = line;
+    } else {
+      $('result').textContent = active ? 'Your move.' : 'Choose your bet, then deal.';
+      $('chase-line').textContent = active ? '“What’s it gonna be?”' : '“Pull up a chair.”';
+    }
+    if (!active && v.bankroll === 0) {
+      $('result').textContent += ' Open Rules for a new stack.';
+    }
+    save();
+  }
+
+  function ping(pitches) {
+    if (!sound || !audio || audio.state !== 'running') return;
+    for (const [i,hz] of pitches.entries()) {
+      const oscillator = audio.createOscillator();
+      const envelope = audio.createGain();
+      const t = audio.currentTime + i * .09;
+      oscillator.type = 'triangle';
+      oscillator.frequency.value = hz;
+      envelope.gain.setValueAtTime(.068,t);
+      envelope.gain.exponentialRampToValueAtTime(.001,t+.17);
+      oscillator.connect(envelope).connect(audio.destination);
+      oscillator.start(t);
+      oscillator.stop(t+.17);
+    }
+  }
+
+  function play(action) {
+    if ($(action).disabled) return;
+    try {
+      const view = action === 'deal' ? table.deal(bet) : table[action]();
+      ping(view.outcome === 'win' || view.outcome === 'blackjack' ? [440,660,880] : view.outcome === 'lose' ? [220,164] : [372]);
+      render();
+    } catch (error) {
+      $('result').textContent = error.message;
+    }
+  }
+
+  for (const chip of chips) chip.addEventListener('click', () => {
+    bet = Math.min(table.view().bankroll, Math.round((bet + Number(chip.dataset.value)) * 100) / 100);
+    ping([490]);render();
+  });
+  $('clear').addEventListener('click',()=>{bet=0; render();});
+  for (const id of ['deal','hit','stand','double']) $(id).addEventListener('click',()=>play(id));
+  $('reset').addEventListener('click',()=>{
+    table.reset();bet=10;document.querySelector('.rules').open=false;render();
+  });
+  $('sound').addEventListener('click',()=>{
+    if (!window.AudioContext) return;
+    sound=!sound;
+    if (sound) {
+      audio ??= new AudioContext();
+      audio.resume().catch(()=>{});
+    }
+    $('sound').setAttribute('aria-pressed',String(sound));
+    $('sound').textContent=sound?'Sound on':'Sound off';
+  });
+  document.addEventListener('keydown', event=>{
+    if (event.repeat || event.metaKey || event.ctrlKey || event.altKey || document.querySelector('.rules').open) return;
+    const id={KeyD:'deal',KeyH:'hit',KeyS:'stand',KeyX:'double'}[event.code];
+    if (id) { event.preventDefault(); play(id); }
+  });
+  render();
+})();
+
+</script>
+</body>
+</html>
