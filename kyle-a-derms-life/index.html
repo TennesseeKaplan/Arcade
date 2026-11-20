@@ -76,6 +76,35 @@
     .beta-banner { margin-bottom: 4px; }
   }
   @media (prefers-reduced-motion: reduce) { #clock { transition: none; } }
+  body { background: #151a1b; color: #fbecd2; }
+  main { max-width: 960px; }
+  .beta-banner { background: #30342b; color: #e8d7aa; border: 1px solid #645d46; border-radius: 2px; }
+  .game { grid-template-columns: 1fr; gap: 3px; }
+  .scene-frame { position: relative; background: #10161b; border: 2px solid #887953; box-shadow: 0 0 0 3px #252b24; }
+  canvas, main.in-mine canvas { display: block; margin: auto; border-radius: 0; max-height: calc(100dvh - 208px); image-rendering: pixelated; }
+  .panel, main.in-mine .panel { position: relative; inset: auto; background: #202b2a; border: 1px solid #78816a; border-radius: 0; padding: 7px 11px; min-height: 100px; }
+  #heading { color: #f0cf90; font: 800 1.05rem Georgia, serif; }
+  #status, .stats { color: #e0dcc2; }
+  #status { min-height: 0; }
+  button, .panel button { color: #f7ead1; background: #394540; border: 1px solid #778275; border-radius: 2px; }
+  button[aria-pressed="true"], #actions button:last-child:not([aria-pressed]), #continue { background: #d5b575; color: #28251d; }
+  #meter { background: #151d20; border: 1px solid #927e59; border-radius: 2px; }
+  #needle { background: #fff3bf; box-shadow: 0 0 4px #ea9a47; }
+  #zone { background: #739a5d; }
+  #dialogue { position: absolute; left: 5%; right: 5%; bottom: 5%; z-index: 2; background: #172326f5; border: 2px solid #bda373; padding: 8px 12px; box-shadow: 0 4px #121b1e; }
+  #dialogue strong { color: #e6c789; }
+  #dialogue p { margin: 4px 0; }
+  #dialogue button { min-height: 40px; }
+  main.in-mine #stick { display: grid; }
+  main.in-mine #movement { position: static; }
+  @media (any-pointer: coarse) and (orientation: landscape) {
+    .game, main.in-mine .game { display: grid; grid-template-columns: minmax(0, 1fr) minmax(13rem, 32%); gap: 5px; }
+    canvas, main.in-mine canvas { max-height: calc(100dvh - 79px); }
+    .panel, main.in-mine .panel { font-size: .85rem; padding: 6px; }
+    main.in-mine #actions { padding-right: 0; }
+    #movement, main.in-mine #movement { position: static; }
+  }
+  @media (orientation: portrait) { canvas, main.in-mine canvas { max-height: none; } }
 </style>
 </head>
 <body>
@@ -85,6 +114,7 @@
   <div class="game">
     <div class="scene-frame">
       <canvas id="scene" width="640" height="380" role="img" aria-label="Kyle’s bedroom"></canvas>
+      <section id="dialogue" hidden aria-live="polite"><strong id="speaker"></strong><p id="speech"></p><button id="continue" type="button">Continue · A / Space</button></section>
       <div id="title-scroll">
         <h2>Kyle - A Derm’s Life</h2>
         <p>Five days to make $1,100 and buy a yacht. Fall short and it’s back to the bedroom as a full-time streamer.</p>
@@ -114,6 +144,23 @@ const ctx = canvas.getContext('2d');
 const kyleSprite = new Image();
 kyleSprite.src = 'data:image/png;base64,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';
 
+const npcSprites = ['data:image/png;base64,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',
+'data:image/png;base64,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',
+'data:image/png;base64,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'].map(source => {
+  const sprite = new Image();
+  sprite.src = source;
+  return sprite;
+});
+function npc(index, x, foot, height, tint = false) {
+  const sprite = npcSprites[index];
+  if (!sprite.naturalHeight) return;
+  const width = sprite.naturalWidth * height / sprite.naturalHeight;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  if (tint) ctx.filter = 'sepia(.5) saturate(2.2) hue-rotate(330deg)';
+  ctx.drawImage(sprite, x - width / 2, foot - height, width, height);
+  ctx.restore();
+}
 const dollars = amount => '$' + amount.toLocaleString('en-US');
 const storageKey = 'arcade-kyle-day-one-day-v2';
 const yachtPrice = 1100;
@@ -135,6 +182,37 @@ let tickStamp = '';
 let musicBeat = -1;
 let muted = false;
 let monitorUntil = 0;
+let dialogue = null;
+let pointerCursor = NaN;
+let repAt = -Infinity;
+let reactionAt = 0;
+let swing = null;
+let aim = { x: 1, y: 0 };
+let enemy = { x: 470, y: 242, windup: 0, recover: 0, flash: 0 };
+
+function talk(name, words, next, hold = .35) {
+  dialogue = { at: now(), next, hold };
+  keys.clear();
+  pointers.clear();
+  walking = false;
+  byId('speaker').textContent = name;
+  byId('speech').textContent = words;
+  byId('dialogue').hidden = false;
+  byId('continue').focus();
+}
+function advance() {
+  if (!dialogue || now() - dialogue.at < dialogue.hold) return;
+  const { at, next } = dialogue;
+  origin += now() - at;
+  dialogue = null;
+  byId('dialogue').hidden = true;
+  next?.();
+}
+function greet() {
+  patientArrives();
+  talk('Patient', 'I’m a different guy btw.');
+}
+
 let audio;
 const mobile = matchMedia('(any-pointer: coarse)');
 const equipment = ['Combat boots', 'Shield', 'Mace', 'Sword of Truth', 'Holy Water'];
@@ -254,7 +332,7 @@ function resetWalk() {
 
 function walk(dt) {
   const available = stations[state.phase];
-  if (!available || monitorUntil || state.phase === 'mine' || trialUntil || titleOpen || lifting || clinicActive || loot) return;
+  if (!available || monitorUntil || dialogue || trialUntil || titleOpen || lifting || clinicActive || loot) return;
   const directions = new Set(pointers.values());
   for (const key of keys) directions.add(keyDirections.get(key));
   const dx = Number(directions.has('right')) - Number(directions.has('left'));
@@ -263,9 +341,11 @@ function walk(dt) {
   walking = length > 0;
   if (walking) {
     if (dx) facing = dx;
+    aim = { x: dx / length, y: dy / length };
     x = Math.max(52, Math.min(591, x + dx * 218 * dt / length));
     y = Math.max(202, Math.min(320, y + dy * 160 * dt / length));
   }
+  if (state.phase === 'mine') return;
   let closest = null;
   let radius = 50;
   for (const station of available) {
@@ -289,6 +369,10 @@ function button(label, action, { main = false, pressed, disabled = false } = {})
   element.disabled = disabled;
   if (pressed !== undefined) element.setAttribute('aria-pressed', pressed);
   element.addEventListener('click', action);
+  if (action === cut) {
+    element.addEventListener('pointerdown', () => { pointerCursor = cursor; });
+    element.addEventListener('pointercancel', () => { pointerCursor = NaN; });
+  }
   byId('actions').append(element);
   if (main && !disabled) primary = action;
 }
@@ -314,14 +398,14 @@ function go(phase, message) {
   monitorUntil = 0;
   if (phase === 'dream') dreamUntil = now() + 1;
   resetWalk();
-  if (phase === 'mine') { nearby = 'beetle'; x = 290; }
+  if (phase === 'mine') resetArena();
   if (phase === 'payout') heardPayout = false;
   trialUntil = 0;
   hitUntil = 0;
   recoveryUntil = 0;
   effect = '';
   if (phase === 'gym') trialAt = state.elapsed + 7 + Math.random() * 5;
-  if (phase === 'clinic') { risk = false; target = .5; }
+  if (phase === 'clinic') { risk = false; target = .5; pointerCursor = NaN; }
   if (phase === 'exchange') { state.exchangeStart = state.elapsed; lastExchangeStep = -1; }
   if (phase === 'gymPay') {
     state.gymPay = state.failedGym || state.reps < 6 ? 40 : state.reps >= 15 ? 320 : 150;
@@ -329,6 +413,8 @@ function go(phase, message) {
   }
   renderControls(message);
   save();
+  if (phase === 'gymPay') talk('Gym regular', byId('status').textContent, () => go('clinic'));
+  if (phase === 'exchange') talk('Kyle', 'I need to convert this to dollars. Good thing there’s a way.', () => { sceneAt = now(); });
 }
 
 function renderControls(message) {
@@ -353,7 +439,7 @@ function renderControls(message) {
     say(message || 'Walk up to the squat rack or bench.');
     if (nearby === 'squat' || nearby === 'bench') {
       if (lifting) {
-        say(message || state.exercise + ' · Tap A or Space. Every three taps earns a rep.');
+        say(message || state.exercise + ' · Tap A or Space for each rep.');
         button('Lift', lift, { main: true });
         secondary = () => { lifting = false; renderControls(); };
         button('Step off', secondary);
@@ -372,8 +458,8 @@ function renderControls(message) {
     say(message || 'Walk up to the patient chair.');
     if (nearby === 'patient' && !clinicActive) button('See patients', () => {
       clinicActive = true;
-      patientArrives();
-      renderControls('“I’m a different guy btw.”');
+      renderControls();
+      greet();
     }, { main: true });
     if (clinicActive) {
       say(message || 'Choose easy or hard (1 or 2). Cut in the green zone.');
@@ -394,8 +480,8 @@ function renderControls(message) {
       say('You did it! The brave warrior gets ' + loot + '.');
       button('✓ Equip', equipLoot, { main: true });
     } else {
-      say(message || (state.fighting ? 'Trading blows. B eats a pear.' : 'Attack the Slag Beetle, or cash out.'));
-      button('Attack', startFight, { main: true, disabled: state.fighting });
+      say(message || 'Move to dodge. Face the beetle and swing. B or X eats a pear.');
+      button('Swing', startFight, { main: true });
       button('Eat pear', eat);
       secondary = eat;
       button('Cash out', () => go('exchange'));
@@ -418,12 +504,13 @@ function renderControls(message) {
   }
 }
 
-let taps = 0;
 function lift() {
-  if (trialUntil) return;
-  taps++;
-  if (taps % 3 === 0) { state.reps++; feedback(true); }
-  hitUntil = now() + .15;
+  const t = now();
+  if (trialUntil || dialogue || t - repAt < .46) return;
+  repAt = t;
+  state.reps++;
+  tone(110, .08, 'triangle', .1);
+  feedback(true);
   refreshStats();
 }
 function badThoughts() {
@@ -475,19 +562,28 @@ function updateZone() {
   byId('zone').style.width = (zoneWidth() * 100) + '%';
 }
 function cut() {
-  if (!clinicActive || now() < hitUntil || !state.hearts || state.patients >= 6) return;
+  const displayed = Number.isFinite(pointerCursor) ? pointerCursor : cursor;
+  pointerCursor = NaN;
+  if (dialogue || !clinicActive || !state.hearts || state.patients >= 6) return;
   state.patients++;
-  const success = Math.abs(cursor - target) <= zoneWidth() / 2;
+  const tolerance = 6 / Math.max(1, byId('meter').clientWidth);
+  const success = Math.abs(displayed - target) <= zoneWidth() / 2 + tolerance;
   effect = success ? '✓' : 'I’m leaving!';
-  hitUntil = now() + 1.2;
+  hitUntil = now() + 100;
+  reactionAt = now();
   feedback(success);
   if (success) state.cash += risk ? 220 : 100;
   else state.hearts--;
-  say(success ? 'Clean cut. +' + dollars(risk ? 220 : 100)
-    : state.hearts ? 'The patient storms out. One heart lost.' : 'Your last patient storms out. Shift over.');
-  target = .26 + Math.random() * .48;
-  updateZone();
   refreshStats();
+  talk('Clinic', success ? 'Clean cut. +' + dollars(risk ? 220 : 100)
+    : state.hearts ? 'The patient storms out. One heart lost.' : 'Your last patient storms out. Shift over.', () => {
+      effect = '';
+      hitUntil = 0;
+      if (!state.hearts || state.patients >= 6) { go('desk'); return; }
+      target = .26 + Math.random() * .48;
+      updateZone();
+      greet();
+    }, .85);
 }
 function enterMonitor() {
   if (monitorUntil) return;
@@ -496,44 +592,79 @@ function enterMonitor() {
   byId('actions').replaceChildren();
   primary = null;
 }
+function resetArena() {
+  x = 205;
+  aim = { x: 1, y: 0 };
+  swing = null;
+  spawnBeetle();
+}
+function spawnBeetle() {
+  enemy = { x: x < 320 ? 510 : 133, y: 242, windup: 0, recover: state.elapsed + .6, flash: 0 };
+}
 function startFight() {
-  if (state.fighting || state.playerHp <= 0) return;
-  state.fighting = true;
-  state.nextAttack = state.elapsed + .45;
-  renderControls('Trading blows with the Slag Beetle.');
+  if (dialogue || loot || swing || state.playerHp <= 0) return;
+  swing = { at: state.elapsed, x: aim.x, y: aim.y, checked: false };
+  tone(165, .15, 'triangle', .07);
 }
 function eat() {
-  if (state.playerHp <= 0 || now() < recoveryUntil) return;
+  if (dialogue || state.playerHp <= 0 || state.playerHp >= 24 || now() < recoveryUntil) return;
   state.playerHp = Math.min(24, state.playerHp + 7);
   recoveryUntil = now() + 2;
+  tone(280, .12, 'triangle', .08);
   say('Kyle eats a cave pear.');
 }
-function fightTick() {
-  if (!state.fighting || nearby !== 'beetle' || state.elapsed < state.nextAttack) return;
-  state.nextAttack = state.elapsed + .72;
-  state.enemyHp -= state.gear === 'Holy Water' ? state.enemyHp : state.level > 1 ? 5 + state.level : 5;
-  hitUntil = now() + .23;
-  if (state.enemyHp <= 0) {
-    state.gold += 300;
-    state.level++;
-    loot = equipment[Math.min(equipment.length - 1, state.level - 2)];
-    feedback(true);
-    state.enemyHp = 18 + state.level * 2;
-    state.fighting = false;
-    renderControls();
-  } else {
-    state.playerHp -= 4;
-    if (state.playerHp <= 0) {
-      state.fighting = false;
+function fightTick(dt) {
+  const dx = enemy.x - x;
+  const dy = enemy.y - y;
+  const distance = Math.hypot(dx, dy);
+  if (swing) {
+    const age = state.elapsed - swing.at;
+    if (age >= .13 && !swing.checked) {
+      swing.checked = true;
+      const aimed = distance < 12 || (dx * swing.x + dy * swing.y) / distance > .3;
+      if (state.gear === 'Holy Water' || (distance <= 88 && aimed)) {
+        state.enemyHp -= state.gear === 'Holy Water' ? state.enemyHp : 7 + state.level;
+        enemy.flash = state.elapsed + .2;
+        enemy.windup = 0;
+        enemy.recover = state.elapsed + .43;
+        feedback(true);
+        if (state.enemyHp <= 0) {
+          state.gold += 300;
+          state.level++;
+          loot = equipment[Math.min(equipment.length - 1, state.level - 2)];
+          swing = null;
+          talk('MineScape', 'You did it! The brave warrior gets ' + loot + '.', equipLoot);
+          refreshStats();
+          return;
+        }
+      }
+    }
+    if (age >= .38) swing = null;
+  }
+  if (enemy.windup) {
+    if (state.elapsed < enemy.windup) return;
+    enemy.windup = 0;
+    enemy.recover = state.elapsed + .78;
+    if (distance < 68) {
+      state.playerHp -= 4;
       feedback(false);
-      go('exchange');
+      if (state.playerHp <= 0) go('exchange');
+    }
+  } else if (state.elapsed >= enemy.recover) {
+    if (distance < 57) enemy.windup = state.elapsed + .52;
+    else {
+      enemy.x -= dx / distance * 85 * dt;
+      enemy.y -= dy / distance * 68 * dt;
     }
   }
 }
 function equipLoot() {
   state.gear = loot;
   loot = null;
+  state.enemyHp = 18 + state.level * 2;
+  spawnBeetle();
   renderControls();
+  save();
 }
 function exchangeTick() {
   const step = Math.min(2, Math.floor((state.elapsed - state.exchangeStart) / .85));
@@ -561,7 +692,7 @@ function buyYacht() {
 }
 function restart() {
   state = fresh();
-  taps = 0;
+  repAt = -Infinity;
   origin = now();
   streak = 0;
   go('wake');
@@ -659,10 +790,96 @@ function kyle(x, y, scale, outfit, upset = false, flex = false, direction = 1) {
   }
   ctx.restore();
 }
+function flat(points, color) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(...points[0]);
+  for (const point of points.slice(1)) ctx.lineTo(...point);
+  ctx.closePath();
+  ctx.fill();
+}
 function room(wall, floor) {
-  ctx.fillStyle = wall;
+  const palettes = {
+    wake: ['#474548', '#36343a', '#6d5d51'],
+    desk: ['#48454a', '#36343a', '#625249'],
+    exchange: ['#48454a', '#36343a', '#625249'],
+    done: ['#474548', '#36343a', '#6d5d51'],
+    gym: ['#4c5350', '#303b37', '#675e50'],
+    gymPay: ['#4c5350', '#303b37', '#675e50'],
+    clinic: ['#667c76', '#465c56', '#849489'],
+    mine: ['#323e48', '#212d38', '#414a49']
+  };
+  if (!palettes[state.phase]) {
+    ctx.fillStyle = wall;
+    ctx.fillRect(0, 0, 640, 380);
+    flat([[0, 285], [640, 285], [640, 380], [0, 380]], floor);
+    return;
+  }
+  const [base, shade, ground] = palettes[state.phase];
+  ctx.fillStyle = shade;
   ctx.fillRect(0, 0, 640, 380);
-  shape([[0, 285], [640, 285], [640, 380], [0, 380]], floor);
+  flat([[66, 0], [582, 0], [565, 253], [76, 253]], base);
+  flat([[76, 253], [565, 253], [640, 380], [0, 380]], ground);
+  flat([[76, 242], [565, 242], [565, 254], [76, 254]], '#292f2c');
+  ctx.save();
+  ctx.strokeStyle = '#171d22';
+  ctx.globalAlpha = .3;
+  ctx.lineWidth = 1;
+  for (let i = -4; i <= 4; i++) line([[320 + i * 52, 253], [320 + i * 112, 380]]);
+  for (const at of [268, 286, 310, 343, 376]) line([[0, at], [640, at]]);
+  for (let i = 0; i < 65; i++) {
+    const px = (i * 197 + 31) % 640;
+    const py = (i * 73 + 17) % 380;
+    flat([[px, py], [px + 12 + i % 15, py - 1], [px + 6, py + 3]], i % 2 ? '#ede3b9' : '#181f21');
+  }
+  ctx.restore();
+  if (state.phase === 'gym' || state.phase === 'gymPay') {
+    flat([[76, 144], [565, 144], [565, 152], [76, 152]], '#7b6d50');
+    flat([[270, 12], [370, 12], [359, 24], [278, 24]], '#d5c9a1');
+    flat([[278, 24], [359, 24], [475, 246], [162, 246]], '#96906b20');
+  }
+  if (state.phase === 'clinic') {
+    flat([[80, 121], [566, 121], [566, 129], [80, 129]], '#b9c4a0');
+    for (let i = 0; i < 11; i++) {
+      const px = 93 + i * 45;
+      flat([[px, 132], [px + 1, 132], [px + 1, 241], [px, 241]], '#394e4c');
+    }
+  }
+}
+function drawRep(t) {
+  const age = Math.min(1, Math.max(0, (t - repAt) / .46));
+  const motionAmount = age < .36 ? age / .36 : (1 - age) / .64;
+  const rise = Math.sin(motionAmount * Math.PI / 2);
+  const bench = state.exercise === 'Bench';
+  const lx = bench ? 506 : 126;
+  if (bench) {
+    ctx.save();
+    ctx.translate(lx - 4, 233);
+    ctx.rotate(-Math.PI / 2);
+    kyle(0, 0, .53, 'coat');
+    ctx.restore();
+    for (const side of [-1, 1]) {
+      const hand = lx + side * 25;
+      const elbow = lx + side * (37 - 10 * rise);
+      const barY = 193 - 39 * rise;
+      flat([[hand - 9, 222], [elbow - 8, 208], [elbow + 8, 204], [hand + 8, 221]], '#b97a45');
+      flat([[elbow - 7, 207], [hand - 6, barY], [hand + 7, barY], [elbow + 8, 208]], '#df9e5f');
+    }
+  } else {
+    const feet = 316;
+    ctx.save();
+    ctx.translate(lx, feet);
+    ctx.scale(1 + rise * .07, 1 - rise * .18);
+    kyle(0, -77, .76, 'coat');
+    ctx.restore();
+  }
+  const barY = bench ? 193 - 39 * rise : 179 + 24 * rise;
+  flat([[lx - 56, barY], [lx + 56, barY], [lx + 56, barY + 6], [lx - 56, barY + 6]], '#ada99c');
+  for (const side of [-1, 1]) {
+    const px = lx + side * 48;
+    flat([[px - 11, barY - 15], [px + 4, barY - 20], [px + 12, barY - 13], [px + 12, barY + 15], [px - 11, barY + 18]], '#252e32');
+    flat([[px - 11, barY - 15], [px + 4, barY - 20], [px + 4, barY + 14], [px - 11, barY + 18]], '#525b57');
+  }
 }
 function desk() {
   box(409, 219, 16, 106, '#905c58');
@@ -708,11 +925,15 @@ function draw(t) {
   }
   if (p === 'wake' || p === 'desk' || p === 'exchange' || p === 'done') {
     room('#a77f83', '#5d4859');
-    box(40, 60, 122, 92, '#5e5478');
-    box(47, 67, 108, 78, '#eeb179');
+    flat([[51, 90], [157, 92], [283, 323], [121, 323]], '#e5b97a16');
+    box(40, 60, 122, 92, '#403d49');
+    box(47, 67, 108, 78, '#9f8b9a');
+    flat([[49, 134], [69, 98], [87, 117], [110, 90], [142, 114], [154, 102], [154, 144], [49, 144]], '#57546c');
     line([[101, 67], [101, 145]]);
     box(47, 247, 246, 67, '#d7c6a4', 13);
-    oval(187, 275, 35, 15, '#b89c76');
+    flat([[55, 288], [285, 289], [275, 308], [52, 307]], '#a09077');
+    flat([[138, 271], [187, 260], [223, 274], [199, 289], [153, 285]], '#b2a082');
+    for (let i = 0; i < 5; i++) line([[72 + i * 44, 296], [87 + i * 44, 298]]);
     box(59, 251, 71, 37, '#e3d5c1', 12);
     desk();
     if (p === 'wake') {
@@ -744,26 +965,19 @@ function draw(t) {
     box(441, 232, 136, 20, '#e29a78');
     box(455, 250, 12, 53, '#3d3447');
     box(552, 250, 12, 53, '#3d3447');
+    flat([[240, 253], [413, 253], [446, 333], [216, 333]], '#313937');
+    flat([[228, 320], [433, 320], [438, 326], [225, 326]], '#85816b');
+    for (const px of [257, 292, 327, 362]) {
+      flat([[px - 13, 271], [px - 9, 253], [px + 13, 253], [px + 17, 269], [px + 12, 278], [px - 8, 278]], '#222a2a');
+      flat([[px - 8, 261], [px + 11, 261], [px + 12, 274], [px - 8, 274]], '#4b5650');
+    }
     caption('SQUAT', 123, 67);
     caption('BENCH', 511, 208);
     const bounce = t < hitUntil && !motion.matches ? -9 : 0;
     const shake = trialUntil && !motion.matches ? Math.sin(t * 45) * 3 : 0;
     if (trialUntil) kyle(320 + shake, 231, .85, 'coat', true);
     else if (lifting) {
-      const up = t < hitUntil;
-      const bench = state.exercise === 'Bench';
-      const lx = bench ? 506 : 126;
-      if (bench) {
-        ctx.save();
-        ctx.translate(lx, 219);
-        ctx.rotate(Math.PI / 2);
-        kyle(0, 0, .52, 'coat');
-        ctx.restore();
-      } else kyle(lx, up ? 218 : 239, .76, 'coat');
-      const barY = bench ? (up ? 155 : 183) : (up ? 191 : 212);
-      box(lx - 58, barY, 116, 7, '#ada9aa', 0);
-      box(lx - 62, barY - 17, 19, 40, '#262839', 2);
-      box(lx + 43, barY - 17, 19, 40, '#262839', 2);
+      drawRep(t);
     } else drawKyleWalking(t, .76, 'coat', t < hitUntil, bounce);
     if (trialUntil) {
       for (const [x, y, size] of [[135, 74, 61], [216, 53, 74], [333, 78, 91], [461, 64, 82], [525, 92, 51]]) {
@@ -775,35 +989,34 @@ function draw(t) {
   }
   if (p === 'clinic') {
     room('#81aaa3', '#53657a');
-    box(42, 85, 165, 80, '#d2e5ce');
-    box(54, 97, 140, 51, '#eae8d2');
+    flat([[72, 205], [235, 205], [251, 274], [61, 274]], '#a5b3a0');
+    flat([[235, 205], [251, 274], [239, 283], [230, 214]], '#54635c');
+    box(42, 85, 165, 80, '#879c8e');
+    box(54, 97, 140, 51, '#c8c8ad');
+    caption('DERMATOLOGY', 124, 126, 13, '#3a4841');
+    flat([[320, 87], [369, 87], [369, 144], [320, 144]], '#e3e1c5');
+    line([[327, 109], [362, 109]]);
+    line([[327, 121], [354, 121]]);
     box(403, 203, 153, 91, '#64769d', 15);
     box(434, 284, 78, 22, '#465177');
     const reaction = clinicActive && t < hitUntil;
     const smiling = reaction && effect === '✓';
     const angry = reaction && !smiling;
     const old = (state.patients - Number(reaction)) % 2 === 0;
-    const px = angry ? 472 + (1.2 - Math.max(0, hitUntil - t)) * 120 : 472;
-    if (old) line([[px + 40, 203], [px + 54, 201], [px + 55, 282]]);
-    oval(px, 184, angry ? 52 : 40, angry ? 53 : 44, angry ? '#e55e52' : '#e2a785');
-    if (old) {
-      oval(px - 19, 153, 19, 11, '#edefe3');
-      oval(px + 17, 155, 5, 4, '#885954');
-    } else {
-      box(px - 35, 145, 70, 16, '#695150', 7);
-      oval(px, 203, 18, 5, '#64463e');
-    }
-    oval(px - 13, 178, 4, 5, '#292032');
-    oval(px + 13, 178, 4, 5, '#292032');
-    if (!reaction) oval(px + 25, 195, 5, 4, '#864f53');
+    const px = angry ? 472 + Math.min(170, (t - reactionAt) * 175) : 472;
+    const arrival = dialogue && byId('speaker').textContent === 'Patient'
+      ? Math.max(0, .65 - (t - dialogue.at)) * 160 : 0;
+    npc(old ? 0 : 1, px + arrival, 315 + Math.abs(Math.sin(arrival / 5)) * 4, angry ? 190 : 160, angry);
     if (clinicActive) kyle(301, 240, .76, 'coat');
     else drawKyleWalking(t, .76, 'coat');
     if (smiling) {
       box(130, 52, 380, 271, '#a3baaa', 14);
-      oval(320, 183, 102, 102, '#e2a785');
-      oval(289, 164, 8, 12, '#292032');
-      oval(351, 164, 8, 12, '#292032');
-      line([[280, 212], [297, 228], [340, 228], [360, 212]]);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(132, 54, 376, 266);
+      ctx.clip();
+      npc(old ? 0 : 1, 319, 858, 795);
+      ctx.restore();
       caption('✓', 437, 116, 48, '#16704e');
     } else if (angry) {
       oval(px - 64, 162, 16, 9, '#f1ebe1');
@@ -816,19 +1029,57 @@ function draw(t) {
   if (p === 'mine') {
     room('#53416f', '#393049');
     shape([[0, 153], [91, 81], [155, 147], [237, 58], [309, 145], [385, 98], [514, 155], [640, 82], [640, 0], [0, 0]], '#362943');
-    oval(439, 230, 71, 47, t < hitUntil ? '#dd955f' : '#a36567');
-    line([[438, 185], [435, 270]]);
-    line([[383, 218], [360, 199], [342, 214]]);
-    line([[489, 220], [514, 200], [531, 214]]);
-    oval(413, 218, 8, 10, '#ffe280');
-    oval(466, 218, 8, 10, '#ffe280');
-    drawKyleWalking(t, .72, 'home', state.fighting);
+    for (const [gx, gy, height] of [[57, 302, 71], [585, 266, 44], [599, 286, 78], [140, 204, 32]]) {
+      flat([[gx - 18, gy], [gx - 7, gy - height * .75], [gx + 4, gy - height], [gx + 16, gy - height * .36], [gx + 12, gy]], '#63a5a3');
+      flat([[gx + 4, gy - height], [gx + 16, gy - height * .36], [gx + 12, gy], [gx + 2, gy]], '#355c69');
+    }
+    const depth = value => 227 + (value - 242) * .72;
+    const ex = enemy.x;
+    const ey = depth(enemy.y) + 27;
+    if (enemy.windup) {
+      ctx.save();
+      ctx.globalAlpha = .52;
+      oval(ex, ey + 16, 60, 22, '#d4794f');
+      ctx.restore();
+    }
+    const shell = enemy.flash > state.elapsed ? '#edbe85' : '#82574e';
+    const legs = Math.sin(t * 22) * 5;
+    for (const side of [-1, 1]) {
+      for (const offset of [-21, 0, 21]) {
+        flat([[ex + side * 18, ey + offset * .35], [ex + side * 45, ey + offset * .5 + legs], [ex + side * 56, ey + offset * .7 + 9], [ex + side * 43, ey + offset * .5 + 6]], '#433b45');
+      }
+    }
+    flat([[ex - 44, ey], [ex - 29, ey - 28], [ex + 24, ey - 33], [ex + 44, ey - 10], [ex + 34, ey + 19], [ex - 27, ey + 22]], shell);
+    flat([[ex - 29, ey - 28], [ex + 24, ey - 33], [ex + 2, ey - 6], [ex - 44, ey]], '#ad8060');
+    flat([[ex + 2, ey - 6], [ex + 44, ey - 10], [ex + 34, ey + 19], [ex - 27, ey + 22]], '#614251');
+    oval(ex - 16, ey + 2, 4, 5, '#f6cb72');
+    oval(ex + 14, ey + 2, 4, 5, '#f6cb72');
+    drawKyleWalking(t, .64, 'home');
+    if (swing) {
+      const phase = Math.max(0, Math.min(1, (state.elapsed - swing.at) / .38));
+      const facingAngle = Math.atan2(swing.y * .7, swing.x);
+      const angle = facingAngle - 1.22 + phase * 2.44;
+      const playerY = 247 + (y - 244) * .55;
+      ctx.save();
+      ctx.translate(x, playerY);
+      ctx.rotate(angle);
+      flat([[15, -6], [57, -5], [74, 0], [57, 5], [15, 6]], '#f3dfaa');
+      flat([[15, -10], [21, -10], [21, 10], [15, 10]], '#ac835b');
+      ctx.restore();
+    }
     if (state.gear !== 'Tin blade') {
       box(x + 27, 239, 25, 23, state.gear === 'Holy Water' ? '#72e2f4' : '#b9a361', 3);
       caption(state.gear, x, 332, 16);
     }
-    caption('HP ' + Math.max(0, state.playerHp), x, 101);
-    caption('SLAG BEETLE · ' + state.enemyHp + ' HP', 440, 130, 19);
+    caption('KYLE  ' + Math.max(0, state.playerHp) + ' HP', 103, 34, 16);
+    caption('SLAG BEETLE  ' + Math.max(0, state.enemyHp) + ' HP', 503, 34, 16);
+    for (const [left, fraction, color] of [[44, state.playerHp / 24, '#76b388'], [438, state.enemyHp / (state.level === 1 ? 18 : 18 + state.level * 2), '#c08158']]) {
+      ctx.fillStyle = '#18242a';
+      ctx.fillRect(left, 40, 120, 5);
+      ctx.fillStyle = color;
+      ctx.fillRect(left, 40, 120 * Math.max(0, Math.min(1, fraction)), 5);
+    }
+    if (enemy.windup) caption('!', ex, ey - 43, 27, '#ffcc80');
   }
   if (p === 'gymPay') {
     room('#a17c8b', '#504252');
@@ -837,11 +1088,7 @@ function draw(t) {
     const arrival = Math.max(0, 1 - (t - sceneAt) * 1.8) * 140;
     ctx.save();
     ctx.translate(arrival, 0);
-    box(419, 198, 74, 115, '#9e756b', 17);
-    oval(457, 167, 43, 42, '#dca584');
-    oval(425, 150, 13, 17, '#ded5cf');
-    oval(488, 150, 13, 17, '#ded5cf');
-    line([[447, 189], [458, 181], [473, 187]]);
+    npc(2, 458, 318 + Math.abs(Math.sin(arrival / 5)) * 5, 180);
     box(383, 219, 40, 23, '#8bd3a1', 3);
     caption('USD', 403, 235, 12, '#292032');
     ctx.restore();
@@ -896,8 +1143,15 @@ function updateClock() {
 }
 function update(t) {
   if (titleOpen) { draw(t); requestAnimationFrame(ms => update(ms / 1000)); return; }
-  walk(Math.max(0, Math.min(.05, t - lastFrame)));
+  const dt = Math.max(0, Math.min(.05, t - lastFrame));
   lastFrame = t;
+  if (dialogue) {
+    byId('clock').classList.remove('glow');
+    draw(t);
+    requestAnimationFrame(ms => update(ms / 1000));
+    return;
+  }
+  walk(dt);
   if (!['wake', 'done', 'yacht'].includes(state.phase)) {
     state.elapsed = Math.min(120, t - origin);
   }
@@ -918,13 +1172,6 @@ function update(t) {
     const sweep = (t * (risk ? 1.08 : .81)) % 2;
     cursor = sweep < 1 ? sweep : 2 - sweep;
     byId('needle').style.left = (cursor * 100) + '%';
-    if (effect && t >= hitUntil) {
-      effect = '';
-      if (state.hearts && state.patients < 6) {
-        patientArrives();
-        say('“I’m a different guy btw.”');
-      }
-    }
     if (state.elapsed >= limits.clinic ||
       ((!state.hearts || state.patients >= 6) && t >= hitUntil)) go('desk');
   }
@@ -932,7 +1179,7 @@ function update(t) {
   if (state.phase === 'desk' && monitorUntil && t >= monitorUntil) go('mine');
   if (state.phase === 'mine') {
     if (state.elapsed >= limits.mine) go('exchange');
-    else fightTick();
+    else fightTick(dt);
   }
   if (state.phase === 'exchange') {
     exchangeTick();
@@ -946,18 +1193,23 @@ function update(t) {
 }
 
 document.addEventListener('keydown', event => {
+  if (dialogue) {
+    if (event.code === 'Space' && !event.repeat) { event.preventDefault(); advance(); }
+    return;
+  }
   if (titleOpen || event.target instanceof HTMLInputElement || event.ctrlKey || event.altKey || event.metaKey) return;
   if (keyDirections.has(event.code) && Object.hasOwn(stations, state.phase) && !trialUntil) {
     event.preventDefault();
     keys.add(event.code);
   }
-  if (nearby === 'patient' && !event.repeat && ['Digit1', 'Digit2'].includes(event.code)) {
+  if (clinicActive && !event.repeat && ['Digit1', 'Digit2'].includes(event.code)) {
     event.preventDefault();
     changeRisk(event.code === 'Digit2');
   }
   if (event.code === 'KeyX' && secondary && !event.repeat) secondary();
   if (event.code === 'Space' && primary && !event.repeat) {
     event.preventDefault();
+    pointerCursor = NaN;
     primary();
   }
 });
@@ -987,8 +1239,11 @@ stick.addEventListener('pointermove', event => {
 for (const eventName of ['pointerup', 'pointercancel', 'lostpointercapture']) {
   stick.addEventListener(eventName, () => { pointers.clear(); byId('knob').style.transform = ''; });
 }
-byId('game-a').addEventListener('click', () => primary?.());
-byId('game-b').addEventListener('click', () => secondary?.());
+byId('continue').addEventListener('click', advance);
+byId('game-a').addEventListener('pointerdown', () => { if (primary === cut) pointerCursor = cursor; });
+byId('game-a').addEventListener('pointercancel', () => { pointerCursor = NaN; });
+byId('game-a').addEventListener('click', () => dialogue ? advance() : primary?.());
+byId('game-b').addEventListener('click', () => { if (!dialogue) secondary?.(); });
 byId('sound').addEventListener('click', event => {
   muted = !muted;
   event.currentTarget.setAttribute('aria-pressed', muted);
@@ -1001,13 +1256,18 @@ byId('start').addEventListener('click', () => {
   if (window.AudioContext) audio = new AudioContext();
   audio?.resume().catch(() => {});
   origin = now() - state.elapsed;
-  if (state.phase === 'wake') saySound('Time for gym.');
+  if (state.phase === 'wake') {
+    saySound('Time for gym.');
+    talk('Kyle', 'Time for gym.');
+  }
+  if (state.phase === 'gymPay') talk('Gym regular', byId('status').textContent, () => go('clinic'));
+  if (state.phase === 'exchange') talk('Kyle', 'I need to convert this to dollars. Good thing there’s a way.', () => { sceneAt = now(); });
   renderControls();
 });
 state = load() || fresh();
 state.fighting = false;
 resetWalk();
-if (state.phase === 'mine') { nearby = 'beetle'; x = 290; }
+if (state.phase === 'mine') resetArena();
 if (state.phase === 'dream') dreamUntil = now() + 1;
 sceneAt = now();
 origin = now() - state.elapsed;
