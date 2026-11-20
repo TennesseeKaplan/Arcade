@@ -486,7 +486,6 @@ function npc(index, x, foot, height, tint = false) {
   ctx.restore();
 }
 const dollars = amount => '$' + amount.toLocaleString('en-US');
-const storageKey = 'arcade-kyle-five-day-v1';
 const yachtPrice = 1100;
 const affirmation = 'I AM A DOCTOR I AM A DOCTOR';
 const limits = { gym: 23, clinic: 46, desk: 5, mine: 32 };
@@ -603,7 +602,6 @@ function advanceZoneIntro() {
   state.guidesSeen.push(zoneIntro.phase);
   hideZoneIntro();
   lastFrame = now();
-  save();
 }
 function gymLine() {
   if (state.gymPay === gymPay.high) return 'Hey, kid. Looking big today.';
@@ -695,15 +693,6 @@ function fresh() {
   return { phase: 'wake', day: 1, elapsed: 0, shiftClosed: false, cash: 0, gymPay: 0, reps: 0, failedGym: false,
     exercise: 'Squat', hearts: 3, patients: 0, gold: 0, level: 1, gear: 'Tin blade', gearItems: [], guidesSeen: [], earnedToday: false, mineWins: 0,
     playerHp: 24, enemyHp: 18 };
-}
-function load() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(storageKey));
-    return saved && Object.hasOwn(labels, saved.phase) ? saved : null;
-  } catch { return null; }
-}
-function save() {
-  try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch {}
 }
 function now() { return performance.now() / 1000; }
 let lastFrame = now();
@@ -853,7 +842,6 @@ function go(phase, message) {
     state.cash += state.gymPay;
   }
   renderControls(message);
-  save();
   if (phase === 'gymPay') showGymPayout();
   else if (phase === 'exchange') talk('Kyle', 'I need to convert this to dollars. Good thing there’s a way.', () => { sceneAt = now(); exchangeTick(); });
   else showAreaGuide();
@@ -867,7 +855,6 @@ function finishShift(message) {
   trialUntil = 0;
   nearby = null;
   renderControls(message);
-  save();
 }
 
 function renderControls(message) {
@@ -1153,7 +1140,6 @@ function fightTick(dt) {
             state.enemyHp = enemyMaxHp();
             spawnBeetle();
             say(state.mineWins <= 3 ? '+125 gold. Another beetle approaches.' : 'New beetle. Tonight’s gold limit is reached.');
-            save();
           }
           refreshStats();
           return;
@@ -1193,7 +1179,6 @@ function equipLoot() {
   state.enemyHp = enemyMaxHp();
   spawnBeetle();
   renderControls('Equipped ' + state.gear + ' · One new item per night.');
-  save();
 }
 function exchangeTick() {
   const i = exchangeSteps.findIndex(step => state.elapsed < step.until);
@@ -2417,13 +2402,8 @@ byId('start').addEventListener('click', () => {
   else showAreaGuide();
   renderControls();
 });
-const savedCampaign = load();
-state = savedCampaign || fresh();
-state.guidesSeen ??= [];
-if (savedCampaign) byId('start').textContent = 'Resume Day ' + state.day;
+state = fresh();
 resetWalk();
-if (state.phase === 'mine') resetArena();
-if (state.phase === 'dream') beginDream();
 sceneAt = now();
 lastFrame = now();
 trialAt = state.elapsed + 5 + Math.random() * 4;

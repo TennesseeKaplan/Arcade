@@ -29,3 +29,8 @@ if (hasTouch) {
     }
   });
 }
+
+// A game visit ends on navigation, even if the browser cached the whole page.
+window.addEventListener('pageshow', event => {
+  if (event.persisted) window.location.reload();
+});

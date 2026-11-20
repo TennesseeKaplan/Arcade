@@ -46,7 +46,6 @@ const configs=[
 ];
 let phase='title', level=0, carIndex=0, jack, bullets=[], foes=[], hazards=[], cover=[], carX=192, carY=startDriveY, carHealth=3, crashTime=0, crashSide=1, chase=0, spawn=0, seed=1, shot=0, hit=0;
 let previous=performance.now(), now=previous, sceneAt=previous, start=null, finish=null, retries=0, best=null;
-try{const saved=Number(localStorage.getItem('desperados-best-wide-train'));if(saved>0)best=saved;}catch{}
 const time=ms=>{const t=Math.max(0,Math.floor(ms));return Math.floor(t/60000)+':'+String(Math.floor(t/1000)%60).padStart(2,'0')+'.'+String(t%1000).padStart(3,'0');};
 const elapsed=()=>start===null?0:(finish??performance.now())-start;
 const controller=createController($('touch'),{
@@ -134,7 +133,7 @@ function updateTrain(dt,age,cfg){
 }
 function setupChase(){carX=192;carY=startDriveY;carHealth=3;crashTime=0;crashSide=1;chase=0;spawn=.75;hazards=[];seed=739+level*419;scene('drive');}
 function retry(kind){retries++;scene(kind==='train'?'trainRetry':'driveRetry');modal(kind==='train'?'Jack is pinned down':'The getaway car is wrecked','Retry time counts toward your finish.','Retry',kind==='train'?()=>setupCar(0):setupChase);}
-function complete(){finish=performance.now();const n=elapsed();if(best===null||n<best){best=n;try{localStorage.setItem('desperados-best-wide-train',String(n));}catch{}}scene('ending');}
+function complete(){finish=performance.now();const n=elapsed();if(best===null||n<best)best=n;scene('ending');}
 function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
 function steerPolice(car,cactuses,dt){
  const candidates=[90,55,110,35,-35].map(offset=>clamp(carX+(car.x>carX?offset:-offset),23,W-23));

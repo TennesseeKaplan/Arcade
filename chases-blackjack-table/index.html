@@ -851,19 +851,15 @@ function createChaseMusic(audioContext) {
   'use strict';
   const $ = id => document.getElementById(id);
   const key = 'arcade-chase-blackjack-v1';
-  let table;
+  const table = BlackjackEngine.createTable();
   let bet = 10;
   let audio;
   let music;
   let sound = true;
   try {
     const saved = JSON.parse(localStorage.getItem(key));
-    table = BlackjackEngine.createTable(saved ? {snapshot:saved.hand} : {});
-    if (Number.isFinite(saved?.bet) && saved.bet >= 0) bet = saved.bet;
     if (typeof saved?.sound === 'boolean') sound = saved.sound;
-  } catch {
-    table = BlackjackEngine.createTable();
-  }
+  } catch {}
   const format = new Intl.NumberFormat('en', { maximumFractionDigits: 2 });
   const chips = [...document.querySelectorAll('[data-value]')];
   const suits = {'♠':'spades','♥':'hearts','♦':'diamonds','♣':'clubs'};
@@ -879,8 +875,8 @@ function createChaseMusic(audioContext) {
     'same-total': ['Same total. Push.', '“Take your chips back.”']
   };
 
-  function save() {
-    try { localStorage.setItem(key, JSON.stringify({hand:table.snapshot(),bet,sound})); } catch {}
+  function saveSound() {
+    try { localStorage.setItem(key, JSON.stringify({sound})); } catch {}
   }
 
   function cardView(card, hidden) {
@@ -1001,7 +997,6 @@ function createChaseMusic(audioContext) {
     if (!active && v.bankroll === 0) {
       $('result').textContent += ' Open Rules for a new stack.';
     }
-    save();
   }
 
   function syncSound() {
@@ -1074,7 +1069,7 @@ function createChaseMusic(audioContext) {
     if (sound) startAudio();
     else music?.stop();
     syncSound();
-    save();
+    saveSound();
   });
   document.querySelector('.control-deck').addEventListener('touchend', event => {
     if (event.target.closest('button:not(:disabled)')) startAudio();
