@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Restricted · Arcade</title>
 <link rel="stylesheet" href="../shared/player/game-page.css">
+<link rel="stylesheet" href="../shared/player/controller.css?v=2">
 <script type="module" src="../shared/player/game-page.js"></script>
 <style>
 :root{color-scheme:light;background:#301529;color:#54244a;font-family:system-ui,sans-serif}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;display:grid;place-items:center;padding:16px}
+body{margin:0;min-height:100vh;display:grid;place-items:center;align-content:center;padding:16px}
 [hidden]{display:none!important}
 #gate{width:min(100%,28rem);background:#ffe4f4;border:4px solid #ee8ab8;border-radius:24px;padding:32px;box-shadow:0 14px 0 #1c0e1c}
 h1{margin:0 0 .7rem;font-size:2rem}
@@ -21,12 +22,25 @@ button{background:#ff99c9;color:#4b1739;font-weight:900;cursor:pointer}
 button:focus-visible,input:focus-visible{outline:3px solid #673785;outline-offset:3px}
 #gate-error{margin:.6rem 0 0;min-height:1.3rem}
 #game{position:relative;width:min(100%,1000px);border:5px solid #ff9ac9;border-radius:18px;overflow:hidden;box-shadow:0 12px 0 #1c0e1c;background:#ffc8e3}
+#scene-wrap{position:relative}
+#controls{width:min(100%,1000px);padding:8px 14px;background:#ffe1f0;--arcade-stick-base:#f1afd3;--arcade-stick-knob:#e471aa;--arcade-stick-border:#ab4c82}
+#info{display:flex;justify-content:space-between;gap:6px;align-items:center;margin:0;padding:6px 12px;background:#ffe7f3;font-size:clamp(.75rem,2vw,1rem);min-height:2rem}
+#objective{font-weight:800;flex:none}
+#hint{margin:0;text-align:right}
+.touch-action-label{display:none}
+@media(any-pointer:coarse){.key-action-label{display:none}.touch-action-label{display:inline}}
+@media(any-pointer:coarse) and (orientation:landscape) and (max-height:540px) and (min-width:550px){
+  body{padding:4px 96px}
+  #game{width:min(100%,calc((100dvh - 46px)*1.7778))}
+  #controls{position:fixed;bottom:6px;left:3px;right:3px;width:auto;padding:0;background:none;pointer-events:none}
+  #controls .arcade-joystick,#controls button{pointer-events:auto}
+}
 canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 #title{position:absolute;inset:0;display:grid;place-content:center;justify-items:center;gap:12px;background:linear-gradient(#ffedf278,#ffb2d191)}
 #title h1{font:950 clamp(2.1rem,8vw,6.5rem)/1 system-ui;color:#fff3fb;text-align:center;text-shadow:0 .045em #ee5c9c,0 .085em #9c3979,0 .13em #742d5b;animation:title-pop .62s both}
 #start{padding:.45em 1.35em;font-size:clamp(1rem,2.7vw,2rem);border:3px solid #fff5cf;box-shadow:0 5px #aa4f82;background:#ff65ad;color:#4f193c;min-height:44px}
 #start:active{transform:translateY(3px);box-shadow:0 2px #aa4f82}
-#hint{position:absolute;right:10px;bottom:8px;margin:0;padding:3px 7px;border-radius:6px;background:#ffedf4;color:#56284a;font-size:clamp(.55rem,1.6vw,.85rem)}
+
 #greeting{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @keyframes title-pop{from{opacity:0;transform:scale(.5) rotate(-7deg)}76%{transform:scale(1.12) rotate(2deg)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#title h1{animation:none}}
@@ -44,11 +58,12 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 </main>
 <section id="game" aria-label="Tina’s World" hidden>
   <audio id="world-music" src="world-one.m4a" preload="auto" loop></audio>
-  <canvas id="screen" width="640" height="360" aria-label="Tina wakes up in a pink meadow"></canvas>
-  <div id="title"><h1>Tina’s World</h1><button type="button" id="start">START</button></div>
-  <p id="hint" hidden>Move ← → · Jump Space</p>
+  <div id="scene-wrap"><canvas id="screen" width="640" height="360" aria-label="Tina wakes up in a pink meadow"></canvas>
+  <div id="title"><h1>Tina’s World</h1><button type="button" id="start">START</button></div></div>
+  <div id="info" hidden><span id="objective"></span><p id="hint"></p></div>
   <p id="greeting" role="status" hidden></p>
 </section>
-<script type="module" src="game.js"></script>
+<div id="controls" hidden aria-label="Game controls"></div>
+<script type="module" src="game.js?v=2"></script>
 </body>
 </html>
