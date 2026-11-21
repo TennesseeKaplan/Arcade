@@ -29,12 +29,43 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 #results {padding:clamp(12px,4vw,32px);border:1px solid #957050;background:#2b202c}
 #results h2 {color:#ffcb80}
 #result-details {color:#f0cfac}
+#title-card {overflow:hidden;text-align:center;border:2px solid #957050;background:#261c28}
+#title-art {aspect-ratio:16 / 9}
+.title-copy {padding:clamp(12px,3vw,20px);border-top:1px solid #957050}
+.title-copy h2 {color:#ffcb80;font-family:Georgia,serif}
+.title-help {color:#f0cfac;font-size:.875rem}
+.title-actions {display:flex;justify-content:center;gap:8px;margin-top:12px}
+.title-actions button {min-height:44px}
+main:has(#title-card:not([hidden])) header {justify-content:center;text-align:center}
+main:has(#title-card:not([hidden])) #clock,
+main:has(#title-card:not([hidden])) footer {display:none}
+@media (max-width:500px) and (orientation:portrait) {
+  #title-art {aspect-ratio:8 / 7}
+  .title-actions {display:grid;grid-template-columns:minmax(0,16rem)}
+}
+@media (orientation:landscape) and (max-height:540px) {
+  main:has(#title-card:not([hidden])) {max-width:720px}
+  #title-card {display:grid;grid-template-columns:1.1fr 1fr;align-items:center}
+  .title-copy {border-top:0;padding:8px}
+  .title-actions {flex-wrap:wrap;margin-top:6px}
+}
 </style><link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
 </head><body><main>
 <header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
-<div id="frame" class="arcade-touch-surface"><canvas id="screen" width="768" height="432" aria-label="Desperados playfield"></canvas>
-<section id="overlay"><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots on the train.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots on the train.</span></p><div><button id="action">Start run</button></div></section></div>
+<section id="title-card" aria-labelledby="title-heading">
+  <canvas id="title-art" width="768" height="432" role="img" aria-label="Jack and Danny flank a red convertible driving into the sunset"></canvas>
+  <div class="title-copy">
+    <h2 id="title-heading">Three trains. Three getaways.</h2>
+    <p>Clear the train cars as Jack. Then steer Danny’s getaway car past police and cacti.</p>
+    <p class="title-help"><span class="desktop-help">Arrows or WASD to move, aim, and steer. Space to shoot on the train.</span><span class="mobile-help">D-pad to move, aim, and steer. A to shoot on the train.</span></p>
+    <div class="title-actions">
+      <button id="start-title" type="button">Start run</button>
+    </div>
+  </div>
+</section>
+<div id="frame" class="arcade-touch-surface" hidden><canvas id="screen" width="768" height="432" aria-label="Desperados playfield"></canvas>
+<section id="overlay" hidden><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots on the train.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots on the train.</span></p><div><button id="action">Start run</button></div></section></div>
 <section id="results" aria-labelledby="result-title" hidden>
   <h2 id="result-title" tabindex="-1"></h2>
   <p id="result-details"></p>
@@ -46,7 +77,13 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
 </main>
 <script type="module">
 import { createController, movementKeys } from '../shared/player/controller.js';
-const $=id=>document.getElementById(id), ctx=$('screen').getContext('2d');
+const $=id=>document.getElementById(id);
+const gameContext=$('screen').getContext('2d');
+let ctx=gameContext;
+const titleArt=$('title-art');
+const titleContext=titleArt.getContext('2d');
+const portraitTitle=matchMedia('(max-width:500px) and (orientation:portrait)');
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const W=384,H=216,startDriveY=166, aimHeight=6;
 ctx.scale(2,2);
 const configs=[
@@ -73,6 +110,9 @@ function scene(next){phase=next;
  sceneAt=performance.now();$('overlay').hidden=true;if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();}
 function modal(title,body,button,action){$('heading').textContent=title;$('message').textContent=body;$('action').textContent=button;$('action').onclick=action;$('overlay').hidden=false;}
 function startRun(){
+ if(phase==='title'){
+  $('title-card').hidden=true;
+ }
  $('results').hidden=true;
  $('frame').hidden=false;
  $('copy-status').textContent='';
@@ -226,8 +266,8 @@ function person(x,y,type,walk=false,glasses=false,armSide=0){
  box(x-6,y-20,1.5,7,'#f1ca9b');box(x+4,y-19,2,5,'#9b685a');
  box(x-5,y-13,10,1.5,'#69464a');box(x,y-13,2,1.5,'#e5b46f');
 }
-function landscape(s=0, sunset=false){
- box(0,0,W,H,sunset?'#b75f67':'#db8a6d');box(0,43,W,28,'#efab77');box(274,29,34,34,'#ffd591');
+function landscape(s=0, sunset=false, sun=true){
+ box(0,0,W,H,sunset?'#b75f67':'#db8a6d');box(0,43,W,28,'#efab77');if(sun)box(274,29,34,34,'#ffd591');
  for(let i=0;i<6;i++){const x=i*91-(s*.25%91);poly([[x-30,113],[x+7,62],[x+28,62],[x+70,113]],i%2?'#986671':'#ae6f71');}
  box(0,112,W,104,'#bc805c');for(let i=0;i<18;i++)box((i*81-s*.7)%397,(i*31)%85+123,8,2,'#e6a878');
 }
@@ -358,6 +398,60 @@ function drawAimingArm(actor,{side,shoulder,elbow,wrist}){
  box(-1,0,3,4,'#493339');box(-2,0,2,2.5,'#e3a277');
  if(shot>.19)box(7,-2,3,2,'#fff1b4');
  ctx.restore();
+}
+let titleLayout=null;
+let titleArtSettled=false;
+function drawTitle(age){
+ const mobile=portraitTitle.matches;
+ const still=reducedMotion.matches;
+ const layout=mobile+':'+still;
+ if(titleArtSettled&&layout===titleLayout)return;
+ titleLayout=layout;
+ titleArtSettled=still||age>=4.35;
+ const width=mobile?320:384, height=mobile?280:216;
+ if(titleArt.width!==width*2||titleArt.height!==height*2){
+  titleArt.width=width*2;
+  titleArt.height=height*2;
+ }
+ ctx=titleContext;
+ ctx.save();
+ ctx.scale(2,2);
+ const horizon=height*.53;
+ const sunX=width*(mobile?.51:.57);
+ ctx.save();
+ ctx.scale(width/W,height/H);
+ landscape(33,true,false);
+ ctx.restore();
+ box(sunX-17,height*.15,34,34,'#ffd591');
+ poly([[sunX-2,horizon],[sunX+3,horizon],[width*.92,height],[width*.18,height]],'#895b56');
+ poly([[sunX,horizon],[sunX+1,horizon],[width*.54,height],[width*.50,height]],'#d89b68');
+
+ const progress=still?0:clamp((age-.35)/4,0,1);
+ const distance=1-(1-progress)**2;
+ const carX=width*.54+(sunX-width*.54)*distance;
+ const carY=height*.86+(horizon-height*.86)*distance;
+ const carScale=(mobile?.50:.53)*(1-distance);
+ if(progress<1){
+  for(let i=0;i<7;i++){
+   const drift=i*(3+carScale*9);
+   ctx.globalAlpha=(1-progress)*(1-i/8)*.7;
+   box(carX-4-drift*.35,carY+8+drift,5+i*2,2,'#eab77f');
+  }
+  ctx.globalAlpha=1;
+  convertible(carX,carY,carScale);
+ }
+ for(const [name,x] of [['jack',width*(mobile?.22:.17)],['danny',width*(mobile?.78:.83)]]){
+  const y=height*(mobile?.34:.52), labelY=height*(mobile?.61:.92);
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(mobile?.70:.77,mobile?.70:.77);
+  portrait(0,0,name);
+  ctx.restore();
+  box(x-30,labelY-12,60,18,'#261c28');
+  words(name.toUpperCase(),x,labelY,10);
+ }
+ ctx.restore();
+ ctx=gameContext;
 }
 function drawing(){
  const age=(now-sceneAt)/1000;
@@ -582,7 +676,12 @@ $('run-again').addEventListener('click', () => {
 });
 $('copy').onclick=async()=>{const s='Desperados — '+time(elapsed())+' ('+retries+' retries)';try{await navigator.clipboard.writeText(s);$('copy-status').textContent=s+' copied.';}catch{$('copy-status').textContent=s;}};
 $('action').onclick=startRun;
-function frame(t){now=t;const dt=Math.max(0,Math.min(.035,(t-previous)/1000));previous=t;update(dt);drawing();scheduleMusic();$('clock').textContent=time(elapsed());$('status').textContent='Best time '+(best===null?'—':time(best))+(start!==null?' · Retries '+retries:'');requestAnimationFrame(frame);}
-if(previewEnding)scene('ending');
+$('start-title').onclick=startRun;
+function frame(t){now=t;const dt=Math.max(0,Math.min(.035,(t-previous)/1000));previous=t;if(phase==='title')drawTitle((now-sceneAt)/1000);else{update(dt);drawing();scheduleMusic();}$('clock').textContent=time(elapsed());$('status').textContent='Best time '+(best===null?'—':time(best))+(start!==null?' · Retries '+retries:'');requestAnimationFrame(frame);}
+if(previewEnding){
+ $('title-card').hidden=true;
+ $('frame').hidden=false;
+ scene('ending');
+}
 requestAnimationFrame(frame);
 </script></body></html>
