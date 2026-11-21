@@ -3,6 +3,7 @@ import { createController, movementKeys } from '../shared/player/controller.js';
 
 const $ = id => document.getElementById(id);
 const canvas = $('screen');
+const worldMusic = $('world-music');
 const ctx = canvas.getContext('2d');
 const W = 640, H = 360, ground = 274;
 const palette = ['#ff649e','#ff925f','#ffe475','#b7ec85','#79d9ec','#bc9dfa'];
@@ -12,7 +13,7 @@ background.src = 'meadow.webp';
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const controller = createController(document.createElement('div'), { keys: { ...movementKeys, Space:'jump' } });
 let phase = 'locked', phaseStart = 0, last = 0;
-let audio, melodyTimer, playedYawn = false;
+let audio, titleMusic, melodyTimer, playedYawn = false;
 const tina = { x:160, y:ground, vy:0, facing:1 };
 const flowers = [[58,270,.82],[101,272,.63],[232,272,.67],[369,272,.79],[462,272,.98],[548,272,.68],[583,272,.86]];
 const rainbowBits = Array.from({ length:125 }, (_, i) => ({
@@ -33,7 +34,7 @@ function note(midi, start, length, volume, type = 'triangle') {
   gain.gain.setValueAtTime(.0001, start);
   gain.gain.exponentialRampToValueAtTime(volume, start + .018);
   gain.gain.exponentialRampToValueAtTime(.0001, start + length);
-  tone.connect(gain).connect(audio.destination);
+  tone.connect(gain).connect(titleMusic);
   tone.start(start);
   tone.stop(start + length + .01);
 }
@@ -46,6 +47,8 @@ const tune = [
 ];
 function startMusic() {
   if (!audio || melodyTimer) return;
+  titleMusic = audio.createGain();
+  titleMusic.connect(audio.destination);
   let bar = 0, next = audio.currentTime + .04;
   const beat = 60 / 156;
   function schedule() {
@@ -55,7 +58,6 @@ function startMusic() {
     const phrase = tune[bar];
     phrase.forEach((pitch, i) => {
       note(pitch, next + i * beat / 2, .23, i % 2 ? .048 : .078);
-      if (phase === 'wake' || phase === 'play') note(pitch + 12, next + i * beat / 2 + .035, .095, .016, 'sine');
     });
     for (const i of [0, 2]) {
       note(phrase[0] - 24, next + i * beat, .37, .08, 'sine');
@@ -262,5 +264,12 @@ $('start').addEventListener('click',()=>{
   $('start').blur();
   $('title').hidden=true;
   phase='wake';phaseStart=performance.now();
+  clearInterval(melodyTimer);
+  titleMusic?.disconnect();
+  worldMusic.play().catch(error => console.warn('Could not play World One music.', error));
 });
-window.addEventListener('pagehide',()=>{clearInterval(melodyTimer);audio?.close().catch(()=>{});});
+window.addEventListener('pagehide',()=>{
+  clearInterval(melodyTimer);
+  worldMusic.pause();
+  audio?.close().catch(()=>{});
+});
