@@ -10,3 +10,30 @@
   -webkit-user-select: text;
   user-select: text;
 }
+
+:root { --arcade-nav-height: 44px; }
+
+.arcade-return-nav {
+  box-sizing: border-box;
+  width: min(100%, 1000px);
+  min-height: var(--arcade-nav-height);
+  margin: 0 auto;
+  padding-inline: max(6px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+}
+
+.arcade-return-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: #fff3e5;
+  background: #28232c;
+  font: 650 .82rem system-ui, sans-serif;
+  text-decoration: none;
+}
+
+.arcade-return-nav a:hover { background: #423647; }
+.arcade-return-nav a:focus-visible { outline: 2px solid #ffbc77; outline-offset: 2px; }

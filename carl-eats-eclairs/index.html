@@ -48,7 +48,7 @@ header button {
 }
 @media (any-pointer: coarse) and (orientation: landscape) and (max-height: 600px) {
   main {
-    width: min(1200px, 100%); height: 100dvh; margin: auto;
+    width: min(1200px, 100%); height: calc(100dvh - var(--arcade-nav-height)); margin: auto;
     padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
       max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
     display: grid; grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr);

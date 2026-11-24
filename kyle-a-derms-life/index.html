@@ -30,12 +30,12 @@
     --frame: #19201f;
     --edge: #545a4d;
     --control: #283733;
-    --display-height: max(142px, calc(100dvh - 120px));
+    --display-height: max(142px, calc(100dvh - 120px - var(--arcade-nav-height)));
     font: 16px/1.4 system-ui, sans-serif;
     background: #0d1212;
   }
   body { margin: 0; padding: 6px; color: var(--ink); }
-  main { margin: 0 auto; min-height: calc(100dvh - 12px); display: grid; place-items: center; }
+  main { margin: 0 auto; min-height: calc(100dvh - 12px - var(--arcade-nav-height)); display: grid; place-items: center; }
   .game {
     width: min(100%, 1200px, calc(var(--display-height) * 1.6842));
     min-width: 0;
@@ -246,7 +246,7 @@
   #movement { display: none; }
   #affirmation-button { min-height: 42px; width: 100%; letter-spacing: .02em; }
   @media (any-pointer: coarse) {
-    :root { --display-height: max(126px, calc(100dvh - 119px)); }
+    :root { --display-height: max(126px, calc(100dvh - 119px - var(--arcade-nav-height))); }
     .game { width: min(100%, 900px); border-radius: 11px 11px 24px 11px; }
     .scene-frame { width: min(100%, calc(var(--display-height) * 1.6842)); margin: auto; }
     .panel { min-height: 72px; gap: 3px 7px; padding: 4px 6px; grid-template-columns: minmax(6rem, .65fr) 1fr; grid-template-areas: "readout status" "actions actions" "meter meter"; }
@@ -320,7 +320,7 @@
   }
   main[data-phase=dream] .game, main.is-dream .game { width: 100%; border: 0; border-radius: 0; box-shadow: none; }
   main[data-phase=dream] .scene-frame, main.is-dream .scene-frame { width: 100%; }
-  main[data-phase=dream] #scene, main.is-dream #scene { width: 100%; height: 100dvh; object-fit: cover; }
+  main[data-phase=dream] #scene, main.is-dream #scene { width: 100%; height: calc(100dvh - var(--arcade-nav-height)); object-fit: cover; }
   main[data-phase=dream] .field-hud, main[data-phase=dream] .panel,
   main[data-phase=dream] #dialogue, main[data-phase=dream] #zone-intro,
   main.is-dream .field-hud, main.is-dream .panel, main.is-dream #dialogue, main.is-dream #zone-intro { display: none; }
@@ -424,7 +424,7 @@
  .game #control-area{padding:5px 8px;--pad-stick:clamp(46px,9vw,60px);--pad-button:clamp(44px,8.4vw,56px);--pad-gap:clamp(5px,1vw,10px)}
  .game #control-area #movement{position:static;inset:auto;min-height:55px;grid-template-columns:var(--pad-stick,52px) minmax(0,1fr) repeat(2,var(--pad-button,50px))}
  .game #control-area :is(#stick,.ab){transform:none}
- .game .arcade-game-area .scene-frame{--display-height:max(126px,calc(100dvh - 182px))}
+ .game .arcade-game-area .scene-frame{--display-height:max(126px,calc(100dvh - 182px - var(--arcade-nav-height)))}
 }
 @media(max-width:600px){.game .arcade-game-area .panel{grid-template-areas:"readout" "status" "meter"}}
 </style>
@@ -966,11 +966,7 @@ function renderControls(message) {
     if (p === 'done' && state.day < daysToPlay) button('Start day ' + (state.day + 1), nextDay, { main: state.cash < yachtPrice });
     if (p === 'done' && state.day === daysToPlay && state.cash < yachtPrice) button('See ending', () => go('streamer'), { main: true });
     if (p !== 'done') button('New game', restart, { main: true });
-    const back = document.createElement('a');
-    back.href = '../';
-    back.textContent = 'Arcade';
-    back.setAttribute('aria-label', 'Back to Arcade');
-    byId('actions').append(back);
+
   }
 }
 

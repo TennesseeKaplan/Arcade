@@ -34,3 +34,13 @@ if (hasTouch) {
 window.addEventListener('pageshow', event => {
   if (event.persisted) window.location.reload();
 });
+
+// Resolve the Arcade root from this module so previews and subpath hosts also work.
+const arcadeNav = document.createElement('nav');
+arcadeNav.className = 'arcade-return-nav';
+arcadeNav.setAttribute('aria-label', 'Arcade navigation');
+const arcadeLink = document.createElement('a');
+arcadeLink.href = new URL('../../', import.meta.url).href;
+arcadeLink.textContent = '← Back to Arcade';
+arcadeNav.append(arcadeLink);
+document.body.prepend(arcadeNav);

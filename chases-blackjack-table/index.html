@@ -32,7 +32,7 @@ button:disabled { cursor: default; }
 button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid #fff0bc; outline-offset: 3px; }
 .cabinet { width: min(100% - 24px, 880px); margin: 0 auto; padding: 10px 0 18px; }
 .masthead { position: relative; z-index: 3; display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
-.arcade { margin-right: auto; text-decoration: none; color: #f3dbb3; font-weight: 750; }
+.masthead { justify-content: flex-end; }
 .utility, .rules summary, .rules button { padding: 5px 9px; min-height: 34px; border: 1px solid #76514c; border-radius: 3px; font-size: .78rem; font-weight: 800; background: #34242a; }
 .utility:disabled { opacity: .45; }
 .rules { position: relative; }
@@ -146,7 +146,7 @@ button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px soli
   .marquee { padding: 6px 0 6px clamp(17px, 5vw, 44px); }
   .marquee h1 { font-size: clamp(1.23rem, 3.8vw, 2.15rem); }
   .marquee p { margin-top: 4px; min-height: 0; }
-  .dealer { width: clamp(98px, min(18vw, calc((100dvh - 251px) * 1.14)), 154px); }
+  .dealer { width: clamp(98px, min(18vw, calc((100dvh - 251px - var(--arcade-nav-height)) * 1.14)), 154px); }
   .sconce { width: 26px; height: 37px; }
   .felt { padding: 5px 8px; }
   .inlay { padding: 6px 8px 5px; min-height: 0; gap: 5px; }
@@ -331,7 +331,6 @@ button.bet-chip { cursor: pointer; }
 <body>
 <main class="cabinet">
   <header class="masthead">
-    <a class="arcade" href="https://tennesseekaplan.github.io/Arcade/">← Arcade</a>
     <details class="rules">
       <summary>Rules</summary>
       <div class="rule-sheet"><p>Get closer to 21 than Chase without going over. Aces count as 1 or 11. Chase stands on all 17s. Blackjack pays 3:2. Ties return your bet. Double on your first two cards to double the bet and draw one last card. Split one matching pair by matching your bet. Split aces get one card each.</p>
