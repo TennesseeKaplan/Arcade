@@ -253,12 +253,9 @@ function prompt(text, action='') {
   if(hint.dataset.value===value)return;
   hint.dataset.value=value;
   hint.textContent=text;
-  if(action) {
-    for (const [css,label] of [['key-action-label','Space'],['touch-action-label','A']]) {
-      const span=document.createElement('span');
-      span.className=css;span.textContent=' · '+label;
-      hint.append(span);
-    }
+  $('tina-key-action').hidden = !action;
+  if (action) {
+    $('tina-key-label').textContent = action;
     controller.setActionLabel('interact',action);
   }
 }
@@ -319,8 +316,8 @@ function updateStage(dt,t,now) {
     tina.y=Math.max(111,Math.min(331,tina.y+dy*120*dt));
     $('objective').textContent='Flowers '+picked+' / 20';
     const plant=nearestPlant();
-    if (picked===20) prompt('Walk right through the gate →');
-    else if (plant) prompt('Pick '+flowerNames[plant.type].toLowerCase(),'Pick');
+    if (picked===20) prompt('Walk through the gate on the right.');
+    else if (plant) prompt('Pick a '+flowerNames[plant.type],'Pick a '+flowerNames[plant.type]);
     else prompt(lastFlower ? lastFlower+' picked. Find another.' : 'Walk up to a flower');
     if(tina.x>=627 && picked===20){enter('church');return;}
   } else if(phase==='church') {
@@ -328,10 +325,10 @@ function updateStage(dt,t,now) {
       prayer=Math.min(10,prayer+dt);
       if(prayer>=10){praying=false;effect([60,64,67,72],'sine',.57,.08);}
     }
-    $('objective').textContent=prayer>=10?'Prayer complete':praying?'Praying · '+Math.ceil(10-prayer)+' s':'Find an empty pew';
-    if(prayer>=10)prompt('Walk right to dinner →');
+    $('objective').textContent=prayer>=10?'Prayer Complete':praying?'Praying · '+Math.ceil(10-prayer)+' s':'Find an Empty Pew';
+    if(prayer>=10)prompt('Walk right to go to dinner.');
     else if(praying)prompt('Stay for the blessing');
-    else if(Math.abs(tina.x-pewX)<33)prompt('Kneel and pray','Pray');
+    else if(Math.abs(tina.x-pewX)<33)prompt('Kneel and Pray','Pray');
     else prompt('Walk to the empty pew');
     if(tina.x>=627 && prayer>=10){enter('dinner');return;}
   } else if(phase==='dinner') {
@@ -347,13 +344,13 @@ function updateStage(dt,t,now) {
     if(eaten>=5) {
       if (now>=chewUntil) seated=false;
       prompt('Joe: Sweet dreams! Walk right →');
-    } else if(seated && stack)prompt('Eat a steak','Eat');
+    } else if(seated && stack)prompt('Eat a Steak','Eat a Steak');
     else if(seated)prompt('Joe is cooking another steak');
     else prompt('Walk up to your chair');
     if(tina.x>=627 && eaten>=5){enter('bed');return;}
   } else if(phase==='bed') {
     $('objective').textContent=t>=4.2?'Goodnight, Tina':'Bedtime';
-    if(t>=4.2)prompt('Start the next morning','Wake');
+    if(t>=4.2)prompt('Start the Next Morning','Wake');
     else prompt('');
     if(t>=.7 && bedtimeCue===0){bedtimeCue++;effect([72,78,84],'sine',.28);}
     if(t>=1.65 && bedtimeCue===1){bedtimeCue++;effect([83,88],'triangle',.28);}

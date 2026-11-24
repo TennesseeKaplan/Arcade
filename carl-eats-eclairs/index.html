@@ -6,6 +6,9 @@
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
+<link rel="stylesheet" href="../shared/player/blueprint/components.css">
+<link rel="stylesheet" href="../shared/player/layout.css">
+<script type="module" src="../shared/player/layout.js"></script>
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
 #stage,
@@ -74,14 +77,23 @@ header button {
   #overlay { overflow: auto; }
 }
 #touch{--control-accent:#e7bc8c;--control-ink:#332233;--control-shadow:#795367}
+main .arcade-game-area header,main .arcade-game-area footer{color:var(--arcade-text)}
+main .arcade-game-area #hud{background:var(--arcade-hud);color:var(--arcade-text)}
+main .arcade-game-area #stage{overflow:hidden;border-radius:10px}
+#touch .arcade-move-caption{margin-right:auto;margin-left:7px}
+@media(any-pointer:coarse) and (orientation:landscape) and (max-height:540px){#touch .arcade-move-caption{display:none}#touch{border:0;box-shadow:none}}
 </style>
 <main>
+<section class="bp5-card arcade-game-area" aria-label="Game Area">
+<div class="arcade-theme-bar"><button class="bp5-button bp5-minimal arcade-theme-toggle" type="button" data-arcade-theme>Dark Mode</button></div>
 <header><h1>Carl Eats Éclairs</h1><div><button id="pause" type="button">Pause</button> <button id="mute" type="button" aria-pressed="false">Sound on</button></div></header>
-<div id="hud"><span id="street"></span><span id="score"></span><span id="hearts"></span><span id="clock"></span></div>
+<div id="hud" class="arcade-objectives"><span id="street"></span><span id="score"></span><span id="hearts"></span><span id="clock"></span></div>
 <div id="stage"><canvas width="384" height="232" aria-label="Pixel-art Park Slope game board"></canvas>
 <div id="overlay"><article><h2 id="heading"></h2><p id="credits" hidden></p><p id="message"></p><button id="action" type="button"></button></article></div></div>
 <footer><span id="keyboard-help">Move with WASD or arrows · Space throws a controller · P pauses</span><span id="touch-help">Drag the joystick to move. Tap or hold Throw.</span></footer>
-<div id="touch"><div id="joystick" role="group" aria-label="Drag joystick to move"><div id="stick"></div></div><button id="throw" type="button">Throw</button></div>
+</section>
+<div class="arcade-controls-area arcade-key-row" aria-label="Controls"><kbd>← ↑ ↓ →</kbd> Move <kbd>Space</kbd> Throw</div>
+<div id="touch" class="arcade-controls-area" aria-label="Controls"><div id="joystick" role="group" aria-label="Drag joystick to move"><div id="stick"></div></div><span class="arcade-move-caption">Move</span><button id="throw" type="button">Throw</button></div>
 </main>
 <script>
 'use strict';

@@ -2,6 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Desperados — Jack and Danny</title>
 <link rel="stylesheet" href="../shared/player/controller.css">
+<link rel="stylesheet" href="../shared/player/blueprint/components.css">
+<link rel="stylesheet" href="../shared/player/layout.css">
+<script type="module" src="../shared/player/layout.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#201722;color:#fff0ce;font:16px system-ui}main{max-width:860px;margin:auto;padding:12px}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}h1{margin:0;color:#ffcb80;font:900 clamp(2rem,7vw,4rem)/.95 Georgia}header p{margin:.4rem 0 0}#clock{font:800 1.1rem monospace;color:#ffcb80}
@@ -52,10 +55,22 @@ main:has(#title-card:not([hidden])) footer {display:none}
   .title-copy {border-top:0;padding:8px}
   .title-actions {flex-wrap:wrap;margin-top:6px}
 }
+main .arcade-game-area header,main .arcade-game-area header h1,main .arcade-game-area #clock{color:var(--arcade-text)}
+main .arcade-game-area header h1{font:760 clamp(1.2rem,5vw,2rem)/1.1 system-ui}
+main .arcade-game-area #frame,main .arcade-game-area #title-card{border-radius:10px;overflow:hidden}
+main .arcade-game-area footer{color:var(--arcade-text)}
+#touch .arcade-move-caption{margin-right:auto;color:#fff2de}
+#touch .arcade-dpad{order:-1}
+#touch .arcade-action-buttons{order:1}
+@media(any-pointer:coarse) and (orientation:landscape) and (max-height:540px){
+ main .arcade-game-area{padding:4px}#touch .arcade-move-caption{display:none}
+}
 </style><link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
 </head><body><main>
+<section class="bp5-card arcade-game-area" aria-label="Game Area">
+<div class="arcade-theme-bar"><button class="bp5-button bp5-minimal arcade-theme-toggle" type="button" data-arcade-theme>Dark Mode</button></div>
 <header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
 <section id="title-card" aria-labelledby="title-heading">
   <canvas id="title-art" width="768" height="432" role="img" aria-label="Jack and Danny flank a red convertible driving into the sunset"></canvas>
@@ -64,22 +79,25 @@ main:has(#title-card:not([hidden])) footer {display:none}
     <p>Clear the train cars as Jack. Then steer Danny’s getaway car past police and cacti.</p>
     <p class="title-help"><span class="desktop-help">Arrows or WASD to move, aim, and steer. Space to shoot on the train.</span><span class="mobile-help">D-pad to move, aim, and steer. A to shoot on the train.</span></p>
     <div class="title-actions">
-      <button id="start-title" type="button">Start run</button>
-      <button id="title-music" type="button" aria-pressed="false">Play song</button>
+      <button id="start-title" type="button">Start Run</button>
+      <button id="title-music" type="button" aria-pressed="false">Play Song</button>
     </div>
   </div>
 </section>
 <div id="frame" class="arcade-touch-surface" hidden><canvas id="screen" width="768" height="432" aria-label="Desperados playfield"></canvas>
-<section id="overlay" hidden><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots on the train.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots on the train.</span></p><div><button id="action">Start run</button></div></section></div>
+<section id="overlay" hidden><h2 id="heading">Three trains. Three getaways.</h2><p id="message"><span class="desktop-help">Move with arrows or WASD. Space shoots on the train.</span><span class="mobile-help">Use the D-pad to move and aim. A shoots on the train.</span></p><div><button id="action">Start Run</button></div></section></div>
 <section id="results" aria-labelledby="result-title" hidden>
   <h2 id="result-title" tabindex="-1"></h2>
   <p id="result-details"></p>
-  <button id="run-again" type="button">Run again</button>
-  <button id="copy" type="button">Copy time</button>
+  <button id="run-again" type="button">Run Again</button>
+  <button id="copy" type="button">Copy Time</button>
   <span id="copy-status" role="status"></span>
 </section>
-<div id="touch" role="group" aria-label="Play controls" hidden></div>
-<footer><span id="status">Best time —</span><button class="arcade-touch-surface" id="music" aria-pressed="true">Music on</button><a href="https://tennesseekaplan.github.io/Arcade/">Arcade</a></footer>
+<div id="run-objective" class="arcade-objectives" hidden><strong id="run-progress"></strong><span id="run-instruction"></span></div>
+<footer class="arcade-objectives"><span id="status">Best Time —</span><button class="arcade-touch-surface" id="music" aria-pressed="true">Music On</button><a href="https://tennesseekaplan.github.io/Arcade/">Arcade</a></footer>
+</section>
+<div id="touch" class="arcade-controls-area" role="group" aria-label="Controls" hidden><span class="arcade-move-caption">Move</span></div>
+<div id="desktop-controls" class="arcade-controls-area arcade-key-row" aria-label="Controls" hidden><kbd>← ↑ ↓ →</kbd> Move <span id="desktop-shoot"><kbd>Space</kbd> Shoot</span></div>
 </main>
 <audio id="song" src="garrett-desperado-song.m4a" loop preload="auto"></audio>
 <script type="module">
@@ -116,6 +134,11 @@ const box=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x*2)/2,Math.roun
 const words=(s,x,y,sz=10,c='#fff0ce')=>{ctx.fillStyle=c;ctx.font='bold '+sz+'px monospace';ctx.textAlign='center';ctx.fillText(s,x,y);};
 const poly=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();};
 function scene(next){phase=next;
+ const playing=next==='train'||next==='drive';
+ $('desktop-controls').hidden=!playing;
+ $('desktop-shoot').hidden=next!=='train';
+ $('run-objective').hidden=!playing;
+ $('run-instruction').textContent=next==='train'?'Clear each train car before meeting Danny.':'Steer around the police cars and cacti.';
  touchTray.hidden=next!=='train'&&next!=='drive';
  controller.showActions(next==='train'?['shoot']:[]);
  sceneAt=performance.now();$('overlay').hidden=true;if(document.activeElement?.tagName==='BUTTON')document.activeElement.blur();}
@@ -594,8 +617,8 @@ let songAllowed=true;
 const titleMusic=$('title-music'), gameMusic=$('music');
 function syncMusicButtons(){
  const playing=!song.paused;
- titleMusic.textContent=playing?'Pause song':'Play song';
- gameMusic.textContent=playing?'Music on':'Music off';
+ titleMusic.textContent=playing?'Pause song':'Play Song';
+ gameMusic.textContent=playing?'Music On':'Music Off';
  for(const button of [titleMusic,gameMusic])button.setAttribute('aria-pressed',String(playing));
 }
 function playSong(){
@@ -639,7 +662,9 @@ $('run-again').addEventListener('click', () => {
 $('copy').onclick=async()=>{const s='Desperados — '+time(elapsed())+' ('+retries+' retries)';try{await navigator.clipboard.writeText(s);$('copy-status').textContent=s+' copied.';}catch{$('copy-status').textContent=s;}};
 $('action').onclick=startRun;
 $('start-title').onclick=startRun;
-function frame(t){now=t;const dt=Math.max(0,Math.min(.035,(t-previous)/1000));previous=t;if(phase==='title')drawTitle((now-sceneAt)/1000);else{update(dt);drawing();}$('clock').textContent=time(elapsed());$('status').textContent='Best time '+(best===null?'—':time(best))+(start!==null?' · Retries '+retries:'');requestAnimationFrame(frame);}
+function frame(t){now=t;const dt=Math.max(0,Math.min(.035,(t-previous)/1000));previous=t;if(phase==='title')drawTitle((now-sceneAt)/1000);else{update(dt);drawing();}if(phase==='train')$('run-progress').textContent='Train Escape · Car '+(carIndex+1)+' / '+configs[level].cars;
+ if(phase==='drive')$('run-progress').textContent='Desert Getaway';
+ $('clock').textContent=time(elapsed());$('status').textContent='Best Time '+(best===null?'—':time(best))+(start!==null?' · Retries '+retries:'');requestAnimationFrame(frame);}
 if(previewEnding){
  $('title-card').hidden=true;
  $('frame').hidden=false;

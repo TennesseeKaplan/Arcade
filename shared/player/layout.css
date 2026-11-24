@@ -1,0 +1,32 @@
+/* Shared game chrome. Scene art and input handling stay in each game. */
+.arcade-game-area,.arcade-controls-area {
+  --arcade-panel:#fff;--arcade-controls:#f7f9fb;--arcade-text:#253746;--arcade-line:#cfd8e0;
+  --arcade-hud:#edf1f5;
+  box-sizing:border-box;
+  color:var(--arcade-text);
+  border:1px solid var(--arcade-line);
+  border-radius:15px;
+  background:var(--arcade-panel);
+  box-shadow:0 1px 2px #15132118;
+}
+.arcade-dark :is(.arcade-game-area,.arcade-controls-area){
+  --arcade-panel:#211d28;--arcade-controls:#28232e;--arcade-text:#fff4e6;--arcade-line:#534755;
+  --arcade-hud:#332a37;
+}
+.arcade-game-area{padding:clamp(6px,1.4vw,14px)}
+.arcade-controls-area{margin-top:8px;padding:8px 12px;background:var(--arcade-controls)}
+.arcade-theme-bar{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 6px}
+.arcade-theme-bar .arcade-theme-toggle{
+  min-height:36px;color:var(--arcade-text);background:var(--arcade-hud);border:1px solid var(--arcade-line);
+  border-radius:8px;font:700 .78rem system-ui;padding:4px 9px;
+}
+.arcade-objectives {
+  display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;
+  padding:7px 10px;margin:6px 0 0;border-radius:8px;background:var(--arcade-hud);
+  color:var(--arcade-text);font:600 .83rem/1.35 system-ui;
+}
+.arcade-key-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;font:600 .82rem/1.4 system-ui}
+.arcade-key-row kbd{padding:2px 5px;border-radius:5px;background:var(--arcade-hud);border:1px solid var(--arcade-line);color:inherit}
+.arcade-move-caption{font:650 .68rem system-ui;color:var(--arcade-text)}
+.arcade-controls-area[hidden],.arcade-key-row[hidden]{display:none!important}
+@media(any-pointer:coarse){.arcade-key-row{display:none}}

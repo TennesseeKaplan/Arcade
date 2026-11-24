@@ -7,6 +7,9 @@
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
+<link rel="stylesheet" href="../shared/player/blueprint/components.css">
+<link rel="stylesheet" href="../shared/player/layout.css">
+<script type="module" src="../shared/player/layout.js"></script>
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
 .scene-frame,
@@ -341,12 +344,12 @@
         calc(var(--pad-gutter) + var(--pad-stick) + var(--pad-clear))
         calc(var(--pad-gutter) + 2 * var(--pad-button) + var(--pad-gap) + var(--pad-clear));
     }
-    .panel:has(#movement:not([hidden])) #actions {
+    .arcade-controls-area:has(#movement:not([hidden])) #actions {
       justify-content: center;
       gap: 3px;
     }
-    .panel:has(#movement:not([hidden])) #actions > .pad-mirror,
-    .panel:has(#movement:not([hidden])) #actions:not(:has(> :not(.pad-mirror))) { display: none; }
+    .arcade-controls-area:has(#movement:not([hidden])) #actions > .pad-mirror,
+    .arcade-controls-area:has(#movement:not([hidden])) #actions:not(:has(> :not(.pad-mirror))) { display: none; }
     #actions > button, #actions > a {
       flex: 0 0 auto;
       min-width: 0;
@@ -410,11 +413,27 @@
     #movement .pad-action:empty { display: none; }
   }
 #movement{--control-accent:#d0bea7;--control-ink:#332233;--control-shadow:#795367}
+.game .arcade-game-area{padding:5px}
+.game .arcade-game-area .panel{color:var(--arcade-text);background:var(--arcade-hud);grid-template-areas:"readout status" "meter meter"}
+.game .arcade-game-area .panel :is(#heading,#stats,#status,#exchange){color:var(--arcade-text)}
+.game #control-area:not(:has(#actions > *)):not(:has(#movement:not([hidden]))){display:none}
+.game:has(#title-scroll:not([hidden])) #control-area{display:none}
+#control-area #actions{justify-content:center}
+#movement .arcade-move-caption{grid-column:2;grid-row:1}
+@media(any-pointer:coarse){
+ .game #control-area{padding:5px 8px;--pad-stick:clamp(46px,9vw,60px);--pad-button:clamp(44px,8.4vw,56px);--pad-gap:clamp(5px,1vw,10px)}
+ .game #control-area #movement{position:static;inset:auto;min-height:55px;grid-template-columns:var(--pad-stick,52px) minmax(0,1fr) repeat(2,var(--pad-button,50px))}
+ .game #control-area :is(#stick,.ab){transform:none}
+ .game .arcade-game-area .scene-frame{--display-height:max(126px,calc(100dvh - 182px))}
+}
+@media(max-width:600px){.game .arcade-game-area .panel{grid-template-areas:"readout" "status" "meter"}}
 </style>
 </head>
 <body>
 <main>
   <div class="game">
+    <section class="bp5-card arcade-game-area" aria-label="Game Area">
+    <div class="arcade-theme-bar"><button class="bp5-button bp5-minimal arcade-theme-toggle" type="button" data-arcade-theme>Dark Mode</button></div>
     <div class="scene-frame">
       <canvas id="scene" width="640" height="380" role="img" aria-label="Kyle’s bedroom"></canvas>
       <section id="zone-intro" hidden aria-label="Location">
@@ -434,7 +453,7 @@
       <div id="title-scroll" aria-labelledby="goal-heading">
         <div class="day-overview">
           <p class="title-brand">Kyle - A Derm’s Life</p>
-          <h2 id="goal-heading">Save $1,100 in five days</h2>
+          <h2 id="goal-heading">Save $1,100 in Five Days</h2>
           <p>Buy a yacht or stream forever. Move with WASD, arrows, or joystick. Follow the exit signs on the right.</p>
           <ol class="day-stages" aria-label="A day in Kyle’s life">
             <li><strong>Gym</strong><span>Pick a station. Lift for reps.</span></li>
@@ -453,9 +472,12 @@
       <p id="status" aria-live="polite"></p>
       <div id="meter" hidden aria-label="Hit the green zone"><span id="zone"></span><span id="needle"></span></div>
       <p id="exchange" hidden aria-live="polite"></p>
+    </section>
+    </section>
+    <section id="control-area" class="bp5-card arcade-controls-area" aria-label="Controls">
       <div id="actions"></div>
       <div id="movement" aria-label="Game controls">
-        <div id="stick" aria-label="Movement joystick"><span id="knob"></span></div>
+        <div id="stick" aria-label="Movement joystick"><span id="knob"></span></div><span class="arcade-move-caption">Move</span>
         <button class="ab" id="game-a" type="button" aria-label="A"><span class="pad-letter">A</span><span class="pad-action" id="pad-a-label"></span></button>
         <button class="ab" id="game-b" type="button" aria-label="B"><span class="pad-letter">B</span><span class="pad-action" id="pad-b-label"></span></button>
       </div>

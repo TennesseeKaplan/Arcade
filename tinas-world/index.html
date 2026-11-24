@@ -7,6 +7,9 @@
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <link rel="stylesheet" href="../shared/player/controller.css?v=2">
 <script type="module" src="../shared/player/game-page.js"></script>
+<link rel="stylesheet" href="../shared/player/blueprint/components.css">
+<link rel="stylesheet" href="../shared/player/layout.css">
+<script type="module" src="../shared/player/layout.js"></script>
 <style>
 :root{color-scheme:light;background:#301529;color:#54244a;font-family:system-ui,sans-serif}
 *{box-sizing:border-box}
@@ -45,6 +48,19 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 @keyframes title-pop{from{opacity:0;transform:scale(.5) rotate(-7deg)}76%{transform:scale(1.12) rotate(2deg)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#title h1{animation:none}}
 #controls {--control-accent:#ed90bc;--control-ink:#332233;--control-shadow:#795367}
+#game.arcade-game-area{background:var(--arcade-panel);border-color:var(--arcade-line);padding:8px}
+#scene-wrap{border-radius:9px;overflow:hidden}
+#game #info{background:var(--arcade-hud);color:var(--arcade-text);font-size:.82rem}
+#controls.arcade-controls-area:not([hidden]){margin-top:8px}
+#controls .arcade-move-caption{margin-right:auto}
+#controls .arcade-joystick{order:-1}
+#controls .arcade-action-buttons{order:1}
+.arcade-dark #controls{background:var(--arcade-controls)}
+#tina-keys{width:min(100%,1000px)}
+#game[hidden] ~ #tina-keys,#game:has(#info[hidden]) ~ #tina-keys{display:none}
+@media(any-pointer:coarse) and (orientation:landscape) and (min-width:550px) and (max-height:540px){
+ #game.arcade-game-area{padding:4px}#controls{border:0;box-shadow:none}#controls .arcade-move-caption{display:none}
+}
 </style>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
 </head>
@@ -58,15 +74,17 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
     <p id="gate-error" role="status"></p>
   </form>
 </main>
-<section id="game" aria-label="Tina’s World" hidden>
+<section id="game" class="bp5-card arcade-game-area" aria-label="Tina’s World" hidden>
+  <div class="arcade-theme-bar"><button class="bp5-button bp5-minimal arcade-theme-toggle" type="button" data-arcade-theme>Dark Mode</button></div>
   <audio id="world-music" src="world-one.m4a" preload="auto" loop></audio>
   <div id="scene-wrap"><canvas id="screen" width="640" height="360" aria-label="Tina wakes up in a pink meadow"></canvas>
   <div id="title"><h1>Tina’s World</h1><button type="button" id="start">START</button></div></div>
-  <div id="info" hidden><span id="objective"></span><p id="hint"></p></div>
+  <div id="info" class="arcade-objectives" hidden><span id="objective"></span><p id="hint"></p></div>
   <p id="greeting" role="status" hidden></p>
 </section>
-<div id="controls" hidden aria-label="Game controls"></div>
-<script type="module" src="game.js?v=2"></script>
+<div id="controls" class="arcade-controls-area" hidden aria-label="Controls"><span class="arcade-move-caption">Move</span></div>
+<div id="tina-keys" class="arcade-controls-area arcade-key-row" aria-label="Controls"><kbd>← ↑ ↓ →</kbd> Move <span id="tina-key-action"> <kbd>Space</kbd> <span id="tina-key-label">Jump</span></span></div>
+<script type="module" src="game.js?v=3"></script>
 <script type="module">
 import { protectControlSurface } from '../shared/player/control-surface.js';
 protectControlSurface(document.getElementById('controls'));
