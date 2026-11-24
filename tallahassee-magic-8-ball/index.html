@@ -7,15 +7,19 @@
 <title>Tallahassee Magic 8-Ball</title>
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
+<link rel="stylesheet" href="../shared/player/blueprint/components.css">
+<link rel="stylesheet" href="../shared/player/layout.css">
+<script type="module" src="../shared/player/layout.js"></script>
 <style>
-:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#091217;color:#edf4e7}
+:root{color-scheme:light;font-family:system-ui,sans-serif;background:#e6ece9;color:#193126}
+:root.arcade-dark{color-scheme:dark;background:#091217;color:#edf4e7}
 *{box-sizing:border-box}
 body{margin:0}
 main{width:min(100% - 2rem,58rem);margin:auto;padding:1rem 0 2rem}
 header{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;margin-bottom:.85rem}
-h1{font:700 clamp(1.8rem,5vw,3.1rem)/1 Georgia,serif;margin:0;color:#e3e9bf}
-a{color:#aee1ba;text-underline-offset:.2em}
-.scene{position:relative;overflow:hidden;border:1px solid #426755;border-radius:1.2rem 1.2rem 0 0;background:#10312d}
+h1{font:760 clamp(1.3rem,4vw,2.3rem)/1.08 system-ui;margin:0;color:var(--arcade-text)}
+a{color:var(--oracle-link,#286449);text-underline-offset:.2em}
+.scene{position:relative;overflow:hidden;border:1px solid #426755;border-radius:10px;background:#10312d}
 .portrait{display:block;width:100%;height:auto;aspect-ratio:3 / 2}
 #mouth{transform-box:view-box;transform-origin:294px 211px}
 #mouth[hidden]{display:none}
@@ -39,17 +43,22 @@ a{color:#aee1ba;text-underline-offset:.2em}
 #head-dim{opacity:0}
 .scene.sleep #head-dim{animation:drowse .58s ease-in-out}
 @keyframes drowse{46%{opacity:.66}82%{opacity:.13}}
-.console{padding:clamp(1rem,3vw,1.65rem);border:1px solid #426755;border-top:0;border-radius:0 0 1.2rem 1.2rem;background:#14251f}
-label{display:block;margin-bottom:.4rem;color:#dbe5cc}
+.arcade-game-area,.arcade-controls-area{--arcade-line:#b6cdc0;--arcade-hud:#eaf5ed;--oracle-link:#286449}
+.arcade-dark :is(.arcade-game-area,.arcade-controls-area){--arcade-panel:#12231e;--arcade-controls:#14251f;--arcade-line:#426755;--arcade-hud:#203b30;--oracle-link:#aee1ba}
+.console{padding:clamp(.75rem,2vw,1.15rem)}
+#oracle-result{padding:0 .25rem}
+.arcade-theme-bar.header-controls{margin:0;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:560px){header{flex-wrap:wrap}.header-controls{justify-content:flex-start!important}}
+label{display:block;margin-bottom:.4rem;color:var(--arcade-text)}
 .ask-row{display:flex;gap:.6rem}
-input{min-width:0;flex:1;background:#071510;color:#fff;border:1px solid #63785f;border-radius:.45rem;padding:.7rem;font:inherit;-webkit-user-select:text;user-select:text}
+input{min-width:0;flex:1;background:var(--arcade-panel);color:var(--arcade-text);border:1px solid var(--arcade-line);border-radius:.45rem;padding:.7rem;font:inherit;-webkit-user-select:text;user-select:text}
 button{min-height:44px;background:#c2e5a8;color:#102018;border:0;border-radius:.45rem;padding:.55rem 1rem;font:700 1rem system-ui;cursor:pointer}
 #ask{box-shadow:0 4px 0 #456045;transition:box-shadow .18s,transform .14s,background-color .18s}
 #oracle.ready #ask{background:#d1efa9;box-shadow:0 4px 0 #456045,0 0 1rem #b2f79566}
 #ask:active,#oracle.ready #ask:active{transform:translateY(3px);box-shadow:0 1px 0 #456045}
 #answer.lit{animation:answer-light .52s ease-out}
 @keyframes answer-light {
-  from{text-shadow:0 0 1.25rem #ffc979cc;color:#fff3cb}
+  from{text-shadow:0 0 1.25rem #ffc979cc;color:var(--arcade-text)}
   to{text-shadow:0 0 .25rem #ffc97900}
 }
 #video:not([hidden]) #load-video{animation:marquee-light .75s ease-out}
@@ -58,7 +67,9 @@ button{min-height:44px;background:#c2e5a8;color:#102018;border:0;border-radius:.
   to{box-shadow:0 0 0 #ffc97900}
 }
 :focus-visible{outline:2px solid #ffdb86;outline-offset:3px}
-#answer{font:700 clamp(1.25rem,3vw,1.85rem)/1.25 Georgia,serif;color:#f7e4b8;margin:1rem 0 0;min-height:1.3em}
+#answer{font:700 clamp(1.25rem,3vw,1.85rem)/1.25 Georgia,serif;color:#724b20;margin:.75rem 0 0;min-height:1.3em}
+.arcade-dark #answer{color:#f7e4b8}
+#answer:empty{display:none}
 #video{margin-top:1rem}
 #video a{display:inline-block;margin-top:.7rem}
 iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
@@ -72,7 +83,8 @@ iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
 </head>
 <body>
 <main>
-<header><h1>Tallahassee Magic 8-Ball</h1><div class="header-controls"><button type="button" id="mute">Mute</button><a href="../">Arcade</a></div></header>
+<section class="bp5-card arcade-game-area" aria-label="Game Area">
+<header><h1>Tallahassee Magic 8-Ball</h1><div class="header-controls arcade-theme-bar"><button type="button" class="bp5-button bp5-minimal arcade-theme-toggle" data-arcade-theme>Light Mode</button><button type="button" id="mute">Mute</button><a href="../">Arcade</a></div></header>
 <audio id="theme" src="oracle-loop.m4a" loop preload="auto"></audio>
 <div id="scene" class="scene">
 <svg class="portrait" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet" role="img" aria-label="A giant mustached head floating in green mist over Tallahassee and the Florida Capitol">
@@ -91,16 +103,19 @@ iframe{width:min(100%,36rem);border:0;aspect-ratio:16/9;display:block}
   <ellipse id="head-dim" cx="298" cy="154" rx="112" ry="132" fill="url(#drowse-shadow)"/>
 </svg>
 </div>
-<section class="console" aria-label="Ask the oracle">
-<form id="oracle">
-<label for="question">Ask the floating head a question</label>
-<div class="ask-row"><input id="question" type="text" maxlength="500" required autocomplete="off" spellcheck="false" placeholder="What should I do?"><button type="submit" id="ask">Ask</button></div>
-</form>
+<div id="oracle-result">
 <p id="answer" role="status" aria-live="polite"></p>
 <div id="video" hidden>
-<button type="button" id="load-video">Play video here</button><br>
+<button type="button" id="load-video">Play Video Here</button><br>
 <a href="https://www.youtube.com/watch?v=HGV3yV9q4Q4" target="_blank" rel="noopener">Watch on YouTube</a>
 </div>
+</div>
+</section>
+<section class="bp5-card arcade-controls-area console" aria-label="Controls">
+<form id="oracle">
+<label for="question">Ask the Oracle</label>
+<div class="ask-row"><input id="question" type="text" maxlength="500" required autocomplete="off" spellcheck="false" placeholder="What should I do?"><button type="submit" id="ask">Ask</button></div>
+</form>
 </section>
 </main>
 <script type="module">

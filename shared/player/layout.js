@@ -1,7 +1,7 @@
 const storageKey = 'arcade-dark-mode';
 const toggle = document.querySelector('[data-arcade-theme]');
-let dark = false;
-try { dark = localStorage.getItem(storageKey) === 'true'; } catch {}
+let dark = true;
+try { dark = localStorage.getItem(storageKey) !== 'false'; } catch {}
 function render() {
   document.documentElement.classList.toggle('arcade-dark', dark);
   document.documentElement.classList.toggle('bp5-dark', dark);
