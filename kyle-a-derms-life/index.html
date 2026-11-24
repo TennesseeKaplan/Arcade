@@ -6,6 +6,7 @@
 <title>Kyle - A Derm’s Life</title>
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
+<link rel="stylesheet" href="../shared/player/control-surface.css">
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
 .scene-frame,
@@ -408,6 +409,7 @@
     }
     #movement .pad-action:empty { display: none; }
   }
+#movement{--control-accent:#d0bea7;--control-ink:#332233;--control-shadow:#795367}
 </style>
 </head>
 <body>
@@ -2423,6 +2425,11 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 requestAnimationFrame(ms => update(ms / 1000));
+</script>
+
+<script type="module">
+import { protectControlSurface } from '../shared/player/control-surface.js';
+protectControlSurface(document.getElementById('movement'));
 </script>
 </body>
 </html>

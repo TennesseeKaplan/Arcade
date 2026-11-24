@@ -44,7 +44,9 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 #greeting{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 @keyframes title-pop{from{opacity:0;transform:scale(.5) rotate(-7deg)}76%{transform:scale(1.12) rotate(2deg)}to{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){#title h1{animation:none}}
+#controls {--control-accent:#ed90bc;--control-ink:#332233;--control-shadow:#795367}
 </style>
+<link rel="stylesheet" href="../shared/player/control-surface.css">
 </head>
 <body>
 <main id="gate">
@@ -65,5 +67,9 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
 </section>
 <div id="controls" hidden aria-label="Game controls"></div>
 <script type="module" src="game.js?v=2"></script>
+<script type="module">
+import { protectControlSurface } from '../shared/player/control-surface.js';
+protectControlSurface(document.getElementById('controls'));
+</script>
 </body>
 </html>

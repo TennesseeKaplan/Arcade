@@ -14,28 +14,6 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:cen
   margin-top:8px;padding:10px 15px;border:1px solid #493f43;border-radius:18px;
   background:#211e23;min-height:138px;gap:20px;
 }
-#touch,#touch * {
-  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
-  -webkit-tap-highlight-color:transparent;touch-action:none;
-}
-#touch .arcade-dpad {
-  grid-template:repeat(3,44px)/repeat(3,44px);gap:2px;
-  padding:4px;border-radius:18px;background:#17151a;
-  --arcade-dpad-center:#30292f;
-}
-#touch .arcade-dpad button {
-  width:44px;height:44px;min-height:44px;border-radius:12px;
-  border:1px solid #574851;background:#362e37;color:#fff2de;font-size:1.28rem;
-}
-#touch .arcade-action-buttons button {
-  width:76px;height:76px;border-radius:50%;border:1px solid #ffc573;
-  background:#ffc573;color:#352131;box-shadow:0 3px 0 #986047;
-  font-size:1.3rem;
-}
-#touch .arcade-action-buttons button span {font-size:.68rem}
-#touch .arcade-dpad button:active,#touch .arcade-action-buttons button:active {
-  background:#ffe0a8;color:#332333;transform:translateY(2px);box-shadow:none;
-}
 .mobile-help {display:none}
 @media(any-pointer:coarse){.desktop-help{display:none}.mobile-help{display:inline}}
 footer {font-size:.82rem;min-height:44px}
@@ -76,6 +54,7 @@ main:has(#title-card:not([hidden])) footer {display:none}
 }
 </style><link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
+<link rel="stylesheet" href="../shared/player/control-surface.css">
 </head><body><main>
 <header><div><h1>Desperados</h1><p>Jack and Danny</p></div><time id="clock">0:00.000</time></header>
 <section id="title-card" aria-labelledby="title-heading">
@@ -105,6 +84,7 @@ main:has(#title-card:not([hidden])) footer {display:none}
 <audio id="song" src="garrett-desperado-song.m4a" loop preload="auto"></audio>
 <script type="module">
 import { createController, movementKeys } from '../shared/player/controller.js';
+import { protectControlSurface } from '../shared/player/control-surface.js';
 const $=id=>document.getElementById(id);
 const gameContext=$('screen').getContext('2d');
 let ctx=gameContext;
@@ -131,12 +111,7 @@ const controller=createController($('touch'),{
 });
 controller.showActions([]);
 const touchTray=$('touch');
-// Cancel Safari's native touch path on the tray. The shared controller uses pointer events.
-for(const type of ['touchstart','touchmove','gesturestart','dblclick','contextmenu','selectstart']){
- touchTray.addEventListener(type,event=>{
-  if(event.cancelable)event.preventDefault();
- },{passive:false});
-}
+protectControlSurface(touchTray);
 const box=(x,y,w,h,c)=>{ctx.fillStyle=c;ctx.fillRect(Math.round(x*2)/2,Math.round(y*2)/2,w,h);};
 const words=(s,x,y,sz=10,c='#fff0ce')=>{ctx.fillStyle=c;ctx.font='bold '+sz+'px monospace';ctx.textAlign='center';ctx.fillText(s,x,y);};
 const poly=(pts,c)=>{ctx.fillStyle=c;ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();};

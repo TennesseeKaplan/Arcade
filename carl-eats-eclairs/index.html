@@ -5,10 +5,10 @@
 <title>Carl Eats Éclairs</title>
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
+<link rel="stylesheet" href="../shared/player/control-surface.css">
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
 #stage,
-#touch,
 header button {
   -webkit-user-select: none;
   user-select: none;
@@ -73,6 +73,7 @@ header button {
   article p { margin: 4px 0; }
   #overlay { overflow: auto; }
 }
+#touch{--control-accent:#e7bc8c;--control-ink:#332233;--control-shadow:#795367}
 </style>
 <main>
 <header><h1>Carl Eats Éclairs</h1><div><button id="pause" type="button">Pause</button> <button id="mute" type="button" aria-pressed="false">Sound on</button></div></header>
@@ -565,3 +566,8 @@ prepare();
 panel('intro','A ticket home','Carl’s craving éclairs. Marie’s waiting in Manila.','How to play');
 requestAnimationFrame(frame);
 </script>
+<script type="module">
+import { protectControlSurface } from '../shared/player/control-surface.js';
+protectControlSurface(document.getElementById('touch'));
+</script>
+

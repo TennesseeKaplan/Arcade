@@ -1,0 +1,38 @@
+.arcade-control-surface, .arcade-control-surface * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+}
+
+.arcade-control-surface :is(.arcade-dpad button, .arcade-action-buttons button, .ab, #throw) {
+  border: 1px solid var(--control-border, #574851);
+  border-radius: 12px;
+  background: var(--control-button, #362e37);
+  color: var(--control-text, #fff2de);
+}
+.arcade-control-surface .arcade-dpad {
+  grid-template: repeat(3, 44px) / repeat(3, 44px);
+  gap: 2px;
+  padding: 4px;
+  border-radius: 18px;
+  background: #17151a;
+  --arcade-dpad-center: #30292f;
+}
+.arcade-control-surface .arcade-dpad button { width: 44px; height: 44px; min-height: 44px; }
+.arcade-control-surface :is(.arcade-action-buttons button, #throw, .ab) {
+  border-color: var(--control-accent, #ffc573);
+  border-radius: 999px;
+  background: var(--control-accent, #ffc573);
+  color: var(--control-ink, #352131);
+  box-shadow: 0 3px 0 var(--control-shadow, #986047);
+}
+.arcade-control-surface .arcade-action-buttons button { width: 76px; height: 76px; font-size: 1.3rem; }
+.arcade-control-surface .arcade-action-buttons button span { font-size: .68rem; }
+.arcade-control-surface button:not(:disabled):active {
+  background: var(--control-pressed, #ffe0a8);
+  color: var(--control-ink, #352131);
+  transform: translateY(2px);
+  box-shadow: none;
+}

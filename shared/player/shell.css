@@ -1,0 +1,39 @@
+/* Optional game shell. Games supply their palette and content via CSS variables and slots. */
+.arcade-shell {
+  --shell-text: #f8f6fa;
+  --shell-muted: #bdb7c5;
+  --shell-accent: #ffc27f;
+  --shell-ink: #211822;
+  --shell-line: #403847;
+  --shell-panel: #211d28;
+  color: var(--shell-text);
+  background: var(--shell-panel);
+  border: 1px solid var(--shell-line);
+  border-radius: 20px;
+  padding: clamp(.7rem, 2vw, 1rem);
+  display: grid;
+  gap: .75rem;
+  font: 500 .9rem/1.35 system-ui, sans-serif;
+}
+.arcade-shell-bar, .arcade-shell-hud, .arcade-shell-inputs {
+  display: flex; align-items: center; justify-content: space-between; gap: .75rem;
+}
+.arcade-shell-title {font-size:clamp(1.05rem, 4vw, 1.4rem); font-weight:760; margin:0}
+.arcade-shell-secondary {color:var(--shell-muted);font-size:.78rem}
+.arcade-shell-tools {display:flex;gap:.4rem}
+.arcade-shell button, .arcade-shell kbd {
+  border:1px solid var(--shell-line);border-radius:10px;background:#ffffff0a;color:inherit;
+  font:700 .8rem system-ui,sans-serif;padding:.6rem .7rem;
+}
+.arcade-shell button{min-height:44px}
+.arcade-shell button:focus-visible {outline:2px solid var(--shell-accent);outline-offset:3px}
+.arcade-shell button:active {transform:translateY(2px)}
+.arcade-shell .arcade-shell-primary {background:var(--shell-accent);color:var(--shell-ink);border:0}
+.arcade-shell-stage {aspect-ratio:16/9;overflow:hidden;border-radius:12px;background:#15101b}
+.arcade-shell-stage > :is(img,canvas) {display:block;width:100%;height:100%;object-fit:cover}
+.arcade-shell-hud {padding:.65rem .75rem;border-radius:10px;background:#ffffff08}
+.arcade-shell-hud strong {color:var(--shell-accent)}
+.arcade-shell-inputs {padding:.45rem .7rem}
+.arcade-shell-control-label {display:grid;gap:.35rem;text-align:center;font-size:.72rem;color:var(--shell-muted)}
+.arcade-shell-inputs .arcade-shell-primary {width:64px;height:64px;border-radius:50%;font-size:1.15rem}
+.arcade-shell-keys {display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
