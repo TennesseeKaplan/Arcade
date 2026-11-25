@@ -24,7 +24,7 @@ const interval=()=>4.05-week*.12;
 const grace=()=>4.5-week*.22;
 const called=new Set();
 let active=false, elapsed=0, nextCall=0, served=0, lost=0, late=0, timely=0, callIndex=0;
-let week=1, energy=100, campaignPerfect=true, campaignMisses=0, totalServed=0, halfway=false, advanced=false, cut=null;
+let week=1, energy=100, campaignPerfect=true, totalServed=0, halfway=false, advanced=false, campaignComplete=false, cut=null;
 let guide='', guideAt=0, lastContext='';
 let lastBall='', bannerUntil=0, winner=null, tray=[], deck=[], feedback='', feedbackUntil=0, last=0;
 let audio, notesAt=0, step=0, muted=false;
@@ -149,9 +149,9 @@ function update(dt){
  for(const table of tables){
   if(table.order!==null&&elapsed>=table.expires){
    const order=table.order;
-   lost++;campaignMisses++;table.order=null;table.restock=elapsed+7;table.flash=0;
-   status('Missed Order · '+campaignMisses+' / '+missLimit);
-   cutTo('miss',{table,order},campaignMisses>=missLimit?()=>end(false,'Three Missed Orders'):null);
+   lost++;table.order=null;table.restock=elapsed+7;table.flash=0;
+   status('Missed Order · '+lost+' / '+missLimit);
+   cutTo('miss',{table,order},lost>=missLimit?()=>end(false,'Three Missed Orders'):null);
    return;
   }else if(table.order===null&&table.restock!==null&&elapsed>=table.restock){
    table.order=rand(3);table.restock=null;table.expires=elapsed+clamp(31-week*.85-served*.14,23,30);
@@ -171,7 +171,7 @@ function updateHud(){
  $('call').textContent=winner?'Bingo!':!active?'Next Call —':due?'Call Ball Now':'Next Call '+Math.ceil(nextCall-elapsed)+'s';
  $('served').textContent='Served '+served;
  $('week').textContent='Wednesday '+week+' / '+weeks;
- $('missed').textContent='Misses '+campaignMisses+' / '+missLimit;
+ $('missed').textContent='Misses '+lost+' / '+missLimit;
  const energyValue=Math.round(energy);
  $('energy').value=energyValue;
  $('energy-value').textContent=energyValue+'%';
@@ -204,13 +204,15 @@ function finishShift(){
 function end(confirmed,title){
  active=false;
  advanced=confirmed&&week<weeks;
+ campaignComplete=confirmed&&week===weeks;
+ if(!confirmed)campaignPerfect=false;
  $('touch-controls').hidden=true;$('cover').hidden=false;
  $('heading').textContent=title;
  $('message').textContent=confirmed
   ? week===weeks?'Five Wednesdays complete. Orders served: '+totalServed+'.'
     :'Winner verified. Orders served: '+served+' · On-time calls: '+timely+' · Missed orders: '+lost+'.'
   : 'Orders served: '+served+' · On-time calls: '+timely+'.';
- $('start').textContent=advanced?'Next Wednesday':'Play Again';
+ $('start').textContent=advanced?'Next Wednesday':campaignComplete?'Play Again':'Retry Wednesday';
  $('status').textContent=confirmed?'The crowd cheers for Doctor Bingo.':'The room is closed for the night.';
  if(confirmed)fx([60,64,67,72,76,84],.32,.18);
 }
@@ -218,7 +220,8 @@ $('start').addEventListener('click',()=>{
  bootAudio();
  if(preview){playCutsceneReel();return;}
  if(advanced)week++;
- else {week=1;campaignPerfect=true;campaignMisses=0;totalServed=0;}
+ else if(campaignComplete){week=1;campaignPerfect=true;totalServed=0;}
+ campaignComplete=false;
  advanced=false;setup();active=true;$('cover').hidden=true;$('touch-controls').hidden=!mobile.matches;
  $('how-to').open=false;
  $('start').blur();updateHud();fx([60,67,72],.16,.14);
