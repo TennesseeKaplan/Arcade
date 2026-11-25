@@ -19,15 +19,17 @@ const seats=[
 let tables=[];
 const player={x:224,y:198,face:1,moving:false};
 const mobile=matchMedia('(any-pointer:coarse)');
-const duration=60, weeks=5, missLimit=3;
+const weeks=5, missLimit=3;
 const interval=()=>4.05-week*.12;
-const houseDelay=1.5;
+const bingoLines=Array.from({length:5},(_,i)=>[
+ Array.from({length:5},(_,j)=>5*i+j),Array.from({length:5},(_,j)=>5*j+i),
+]).flat().concat([[0,6,12,18,24],[4,8,12,16,20]]);
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const called=new Set();
 let active=false, elapsed=0, nextCall=0, served=0, lost=0, late=0, timely=0, callIndex=0;
 let week=1, energy=100, campaignPerfect=true, totalServed=0, halfway=false, advanced=false, campaignComplete=false, cut=null;
 let guide='', guideAt=0, lastContext='';
-let lastBall='', calledByHouse=false, bingoAt=0, bannerUntil=0, winner=null, tray=[], deck=[], feedback='', feedbackUntil=0, last=0;
+let lastBall='', bingoAt=0, bannerUntil=0, winner=null, tray=[], deck=[], feedback='', feedbackUntil=0, last=0;
 let audio, notesAt=0, step=0, muted=false;
 const controls=createController($('inputs'),{
  keys:{...movementKeys,Space:'interact'},joystick:true,buttons:[{action:'interact',label:'Interact',face:'A'}],
@@ -42,22 +44,25 @@ function shuffle(list){
  for(let i=list.length-1;i>0;i--){const j=rand(i+1);[list[i],list[j]]=[list[j],list[i]];}
  return list;
 }
+const bingoLine=(card,drawn)=>bingoLines.find(line=>line.every(i=>card[i]===null||drawn.has(card[i])));
 function roundCards(){
- const balls=shuffle(Array.from({length:75},(_,i)=>i+1));
- const line=()=>Array.from({length:5},(_,column)=>column*15+1+rand(15));
- const winnerLine=line(), opening=shuffle([...winnerLine]);
- const rest=balls.filter(ball=>!winnerLine.includes(ball));
- const winAt=11+Math.floor(week/2);
- const openings=new Map([[0,opening[0]],[3,opening[1]],[6,opening[2]],[8,opening[3]],[winAt,opening[4]]]);
- deck=Array.from({length:75},(_,i)=>openings.has(i)?openings.get(i):rest.shift());
- const eventualWinner=rand(tables.length);
- tables.forEach((table,i)=>{
-  table.card=i===eventualWinner?winnerLine:line();
-  if(i!==eventualWinner){
-   const later=deck[winAt+6],column=Math.floor((later-1)/15);
-   table.card[column]=later;
+ const balls=Array.from({length:75},(_,i)=>i+1);
+ const winOn=10+rand(3);
+ // Retry the setup if any valid line would win before the planned draw.
+ while(true){
+  for(const table of tables){
+   const columns=Array.from({length:5},(_,i)=>shuffle(balls.slice(i*15,i*15+15)).slice(0,5));
+   table.card=Array.from({length:25},(_,i)=>i===12?null:columns[i%5][Math.floor(i/5)]);
   }
- });
+  const card=tables[rand(tables.length)].card;
+  const line=shuffle(bingoLines[rand(bingoLines.length)].map(i=>card[i]).filter(n=>n!==null));
+  const lastBall=line.pop();
+  const remaining=shuffle(balls.filter(n=>n!==lastBall&&!line.includes(n)));
+  const opening=shuffle([...line,...remaining.splice(0,winOn-1-line.length)]);
+  if(tables.some(table=>bingoLine(table.card,new Set(opening))))continue;
+  deck=[...opening,lastBall,...remaining];
+  return;
+ }
 }
 function setup(){
  elapsed=0;nextCall=interval();served=0;lost=0;late=0;timely=0;callIndex=0;lastBall='';
@@ -115,7 +120,7 @@ function interact(){
  }else if(here.kind==='mic'){
   if(winner){status('Someone has bingo! Check their table.');return;}
   if(elapsed<nextCall-1){status('The next call isn’t due yet.');return;}
-  callBall(false);
+  callBall();
  }else if(here.kind==='win'){
   finishShift();
  }else{
@@ -129,16 +134,15 @@ function interact(){
  }
  updateHud();
 }
-function callBall(byHouse){
+function callBall(){
  const ball=deck[callIndex++];
  called.add(ball);
  lastBall=ballLabel(ball);
- calledByHouse=byHouse;
  bannerUntil=elapsed+3.1;
- if(byHouse)late++;else timely++;
- nextCall+=interval();
+ if(elapsed<=nextCall+2)timely++;else late++;
+ nextCall=elapsed+interval();
  fx([46,58,73],.11,.19,'square');
- winner=tables.find(table=>table.card.every(number=>called.has(number)))??null;
+ winner=tables.find(table=>bingoLine(table.card,called))??null;
  if(winner){
   bingoAt=performance.now();
   status('BINGO! Check the flashing table.');
@@ -146,7 +150,7 @@ function callBall(byHouse){
  }
 }
 function update(dt){
- if(!winner)elapsed=Math.min(duration,elapsed+dt);
+ if(!winner)elapsed+=dt;
  const [dx,dy]=controls.movement();
  player.moving=Boolean(dx||dy);
  if(dx)player.face=Math.sign(dx);
@@ -157,8 +161,6 @@ function update(dt){
  const blocked=(x,y)=>tables.some(t=>Math.abs(x-t.x)<29&&Math.abs(y-t.y)<18);
  if(!blocked(mx,player.y))player.x=mx;
  if(!blocked(player.x,my))player.y=my;
- if(winner)return;
- if(elapsed>=nextCall+houseDelay)callBall(true);
  if(winner)return;
  for(const table of tables){
   if(table.order!==null&&elapsed>=table.expires){
@@ -171,15 +173,14 @@ function update(dt){
    table.order=rand(3);table.restock=null;table.expires=elapsed+clamp(31-week*.85-served*.14,23,30);
   }
  }
- if(!halfway&&elapsed>=duration/2){
+ if(!halfway&&callIndex>=5){
   halfway=true;
   cutTo('nice');return;
  }
 
 }
 function updateHud(){
- const remain=Math.max(0,Math.ceil(duration-elapsed));
- $('shift').textContent='Shift '+Math.floor(remain/60)+':'+String(remain%60).padStart(2,'0');
+ $('shift').textContent='Balls Called '+callIndex;
  const due=active&&!winner&&elapsed>=nextCall-1;
  $('call').dataset.due=String(due);
  $('call').textContent=winner?'Bingo!':!active?'Next Call —':due?'Call Ball Now':'Next Call '+Math.ceil(nextCall-elapsed)+'s';
@@ -398,8 +399,12 @@ function tableArt(table,i){
  sprite(x+30,y+9-bounce*.8,table.shirts[1],i%2?'#efb590':'#b87d61','#79534a');
  oval(x,y,29,15,table===winner?'#f0b65a':'#754941');
  oval(x,y-3,27,12,table===winner?'#ffc866':'#d29a6a');
- rect(x-11,y-9,21,13,'#fff0cc');
- for(let k=0;k<5;k++)rect(x-9+k*4,y-6,3,4,called.has(table.card[k])?'#b75f6f':'#b7a98e');
+ rect(x-9,y-12,17,17,'#fff0cc');
+ const line=table===winner?bingoLine(table.card,called):null;
+ table.card.forEach((number,k)=>{
+  const color=line?.includes(k)?'#b73654':number===null||called.has(number)?'#477e68':'#b7a98e';
+  rect(x-8+(k%5)*3,y-11+Math.floor(k/5)*3,2,2,color);
+ });
  rect(x+13,y-9,4,7,'#79a8ab');rect(x+13,y-9,4,2,'#c0d4c7');
  if(table===winner){
   text('VERIFY HERE',x,y-30,10,'#fff0bd');
@@ -424,7 +429,7 @@ function draw(){
   bingoCelebration();
  }else if(lastBall&&elapsed<bannerUntil){
   rect(205,33,66,38,'#372438');rect(207,35,62,34,'#fff0cc');
-  text(calledByHouse?'House Call':'Called',238,46,9,'#7b4f55');text(lastBall,238,62,15,'#4b3041');
+  text('Called',238,46,9,'#7b4f55');text(lastBall,238,62,15,'#4b3041');
  }
 }
 function bingoCelebration(){
