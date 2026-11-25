@@ -550,6 +550,41 @@ function drawGulp(age){
  rect(12,-7,3,2,'#f5b992');rect(13,-3,4,1,'#cd896d');
  ctx.restore();
 }
+function drawHandshake(age){
+ const pump=clamp((age-.28)/.18,0,1)*clamp((1.9-age)/.35,0,1);
+ const y=Math.sin((age-.28)*12)*5*pump;
+ ctx.save();
+ ctx.lineCap='round';
+ ctx.lineJoin='round';
+ // The elbows pivot beneath the shoulders while both wrists follow the grip.
+ for(const arm of [
+  {shoulder:208,elbow:216,wrist:228,fill:'#697e6d',highlight:'#90a391'},
+  {shoulder:277,elbow:269,wrist:254,fill:'#eee0d3',highlight:'#fff0dd'},
+ ]){
+  const elbowY=211+y*.4;
+  for(const [width,color] of [[16,'#49323c'],[12,arm.fill],[4,arm.highlight]]){
+   ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+   ctx.moveTo(arm.shoulder,185);ctx.lineTo(arm.elbow,elbowY);
+   ctx.lineTo(arm.wrist,200+y);ctx.stroke();
+  }
+ }
+ ctx.translate(241,199+y);
+ ink([[9,-7],[15,-8],[19,2],[12,7],[8,4]],'#49323c');
+ ink([[10,-5],[14,-6],[17,1],[12,5],[9,3]],'#fff1de');
+ // Two palms overlap. Doc's fingers wrap underneath, and Mario's thumb crosses above.
+ ink([[-15,-4],[-10,-7],[-4,-8],[0,-11],[4,-10],[7,-6],[12,-4],
+  [12,4],[7,10],[0,11],[-7,7],[-14,5]],'#49323c');
+ ink([[-14,-2],[-8,-5],[-3,-5],[1,-9],[4,-8],[6,-4],[3,0],
+  [-4,3],[-8,6],[-13,3]],'#bd8064');
+ ink([[11,-3],[6,-5],[2,-3],[-2,0],[-6,3],[-5,6],[-1,8],
+  [4,9],[8,7],[11,3]],'#e6aa83');
+ ctx.strokeStyle='#a56553';ctx.lineWidth=1;
+ for(const [x,offset] of [[-4,3],[-1,5],[2,7]]){
+  ctx.beginPath();ctx.moveTo(x,offset);ctx.lineTo(x+3,offset-2);ctx.stroke();
+ }
+ ink([[-5,-4],[0,-9],[4,-8],[5,-5],[1,-1],[-3,1],[-6,-1]],'#d39571');
+ ctx.restore();
+}
 function caption(who,line){
  rect(0,231,480,69,'#251b29');rect(0,231,480,2,'#c48a62');
  text(who,22,252,11,'#e6a577','left');text(line,22,276,16,'#fff0d9','left');
@@ -581,9 +616,7 @@ function drawCloseup(now){
  }else if(cut.kind==='mario'){
   portrait(157,143,'mario',{grin:true,scale:.88});
   portrait(327,145,'doc',{grin:true,scale:.85});
-  const handY=195+Math.sin(age*14)*4;
-  ink([[182,185],[225,188],[247,handY],[244,handY+11],[222,207],[182,202]],'#a86d57');
-  ink([[305,184],[265,188],[242,handY],[244,handY+11],[267,207],[305,200]],'#dda382');
+  drawHandshake(age);
   caption('MARIO',"That's my boy!");
  }else{
   rect(141,64,198,162,'#38273e');rect(147,68,186,154,'#c58a4e');
