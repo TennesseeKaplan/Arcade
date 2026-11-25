@@ -27,7 +27,7 @@ h1{font-size:clamp(1.12rem,4vw,2rem);margin:0;line-height:1.05}
 header .tools{margin:0}
 .tools button{min-height:40px}
 #floor{position:relative;overflow:hidden;border:1px solid var(--arcade-line);border-radius:10px}
-canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:#352535}
+canvas{display:block;width:100%;height:auto;background:#352535}
 #cover{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#17101cc4;color:#fff0d8;padding:8px}
 #cover article{max-width:29rem;background:#2c1d2a;border:1px solid #ad7956;border-radius:12px;padding:clamp(8px,2vw,20px)}
 #cover h2{font-size:clamp(1.05rem,5vw,2.2rem);margin:0;color:#ffd097}
@@ -63,13 +63,13 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background
 <header><div><h1>Doctor Bingo</h1><p class="venue">Growler Country · Tallahassee, FL</p></div>
 <div class="tools arcade-theme-bar"><button class="bp5-button bp5-minimal arcade-theme-toggle" data-arcade-theme type="button">Light Mode</button><button id="sound" class="bp5-button bp5-minimal arcade-theme-toggle" type="button" aria-pressed="false">Mute</button></div></header>
 <div id="floor">
-<canvas id="screen" width="480" height="300" aria-label="Doctor Bingo serves Growler Country’s taproom"></canvas>
+<canvas id="screen" width="960" height="600" aria-label="Doctor Bingo serves Growler Country’s taproom"></canvas>
 <div id="cover"><article><h2 id="heading">Wednesday Bingo</h2><p id="message">Serve the tables, call the balls, and refill at the beer tap. Make it through five Wednesdays. Three missed orders end the run.</p><button id="start" type="button">Start Shift</button></article></div>
 </div>
-<div id="hud" class="arcade-objectives"><strong id="week">Wednesday 1 / 5</strong><span id="shift">Shift 2:00</span><strong id="call">Next Call —</strong><span id="served">Served 0</span><span id="missed">Misses 0 / 3</span><span id="energy-block"><label for="energy">Energy</label><meter id="energy" min="0" max="100" value="100"></meter><span id="energy-value">100%</span></span><span id="tray">Plates 0 / 2</span></div>
+<div id="hud" class="arcade-objectives"><strong id="week">Wednesday 1 / 5</strong><span id="shift">Shift 1:30</span><strong id="call">Next Call —</strong><span id="served">Served 0</span><span id="missed">Misses 0 / 3</span><span id="energy-block"><label for="energy">Energy</label><meter id="energy" min="0" max="100" value="100"></meter><span id="energy-value">100%</span></span><span id="tray">Plates 0 / 2</span></div>
 <p id="status" role="status">Serve the right order and verify the winning card before closing.</p>
 </section>
 <div id="keyboard-controls" class="arcade-controls-area arcade-key-row" aria-label="Controls"><kbd>← ↑ ↓ →</kbd> Move <kbd>Space</kbd> Interact</div>
 <div id="touch-controls" class="arcade-controls-area" aria-label="Controls" hidden><div id="inputs"><span class="arcade-move-caption">Move</span></div></div>
-</main><script type="module" src="game.js?v=weeks"></script></body>
+</main><script type="module" src="game.js?v=pace"></script></body>
 </html>

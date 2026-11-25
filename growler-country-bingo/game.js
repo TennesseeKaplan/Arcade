@@ -2,7 +2,10 @@ import {createController,movementKeys} from '../shared/player/controller.js';
 import {protectControlSurface} from '../shared/player/control-surface.js';
 
 const $=id=>document.getElementById(id);
-const ctx=$('screen').getContext('2d');
+const screen=$('screen');
+const ctx=screen.getContext('2d');
+ctx.scale(screen.width/480,screen.height/300);
+const preview=new URLSearchParams(location.search).get('preview')==='cutscenes';
 const foods=['Pretzel','Cuban','Wings'];
 const stations=foods.map((food,i)=>({x:60+i*66,y:96,food}));
 const mic={x:405,y:104};
@@ -16,8 +19,8 @@ const seats=[
 let tables=[];
 const player={x:224,y:198,face:1,moving:false};
 const mobile=matchMedia('(any-pointer:coarse)');
-const duration=120, weeks=5, missLimit=3;
-const interval=()=>7.6-week*.28;
+const duration=90, weeks=5, missLimit=3;
+const interval=()=>5.15-week*.17;
 const grace=()=>4.5-week*.22;
 const called=new Set();
 let active=false, elapsed=0, nextCall=0, served=0, lost=0, late=0, timely=0, callIndex=0;
@@ -60,7 +63,7 @@ function setup(){
  winner=null;tray=[];feedback='';feedbackUntil=0;bannerUntil=0;called.clear();
  energy=100;halfway=false;cut=null;guide='Load two plates at the kitchen window.';guideAt=0;lastContext='';
  tables=seats.slice(0,3+week).map(([x,y,initial,a,b],i)=>({
-  x,y,initial,shirts:[a,b],order:i<3?initial:null,expires:32+i*3-week,
+  x,y,initial,shirts:[a,b],order:i<3?initial:null,expires:25+i*3-week*.65,
   restock:i<3?null:5+(i-2)*4,flash:0,
  }));
  roundCards();
@@ -106,11 +109,11 @@ function interact(){
   fx([48,55,63],.13,.14);
  }else if(here.kind==='mic'){
   if(winner){status('Someone has bingo! Check their table.');return;}
-  if(elapsed<nextCall){status('The next call isn’t due yet.');return;}
+  if(elapsed<nextCall-1){status('The next call isn’t due yet.');return;}
   const ball=deck[callIndex++];
   called.add(ball);lastBall=ballLabel(ball);bannerUntil=elapsed+3.1;
   if(elapsed<=nextCall+grace())timely++;else late++;
-  nextCall=elapsed+interval();
+  nextCall=Math.max(nextCall+interval(),elapsed+2.4);
   fx([46,58,73],.11,.19,'square');
   winner=tables.find(table=>table.card.every(number=>called.has(number)))??null;
   if(winner){status('BINGO! Check the flashing table.');fx([72,76,79,84],.19,.13);}
@@ -122,7 +125,7 @@ function interact(){
   const found=tray.indexOf(table.order);
   if(found<0){status('This table wants '+foods[table.order].toLowerCase()+'.');fx([43],.11,.12);return;}
   tray.splice(found,1);served++;table.order=null;
-  table.restock=elapsed+12+rand(7);table.flash=elapsed+1.2;
+  table.restock=elapsed+14+rand(6);table.flash=elapsed+1.2;
   status('Order served!');fx([67,74,79],.11,.13);
  }
  updateHud();
@@ -133,7 +136,7 @@ function update(dt){
  player.moving=Boolean(dx||dy);
  if(dx)player.face=Math.sign(dx);
  const pace=.56+.44*(energy/100)**.3;
- energy=Math.max(0,energy-dt*(player.moving?1.36:.23));
+ energy=Math.max(0,energy-dt*(player.moving?1.55:.27));
  const mx=clamp(player.x+dx*128*dt*pace,22,458);
  const my=clamp(player.y+dy*122*dt*pace,93,281);
  const blocked=(x,y)=>tables.some(t=>Math.abs(x-t.x)<29&&Math.abs(y-t.y)<18);
@@ -147,19 +150,19 @@ function update(dt){
    cutTo('miss',{table,order},campaignMisses>=missLimit?()=>end(false,'Three Missed Orders'):null);
    return;
   }else if(table.order===null&&table.restock!==null&&elapsed>=table.restock){
-   table.order=rand(3);table.restock=null;table.expires=elapsed+clamp(39-week*1.35-served*.25,25,38);
+   table.order=rand(3);table.restock=null;table.expires=elapsed+clamp(31-week*.85-served*.14,23,30);
   }
  }
  if(!halfway&&elapsed>=duration/2){
   halfway=true;
-  if(lost===0&&late===0&&(winner||elapsed<=nextCall+grace())){cutTo('nice');return;}
+  cutTo('nice');return;
  }
  if(elapsed>=duration)end(false,'Closing Time');
 }
 function updateHud(){
  const remain=Math.max(0,Math.ceil(duration-elapsed));
  $('shift').textContent='Shift '+Math.floor(remain/60)+':'+String(remain%60).padStart(2,'0');
- const due=active&&!winner&&elapsed>=nextCall;
+ const due=active&&!winner&&elapsed>=nextCall-1;
  $('call').dataset.due=String(due);
  $('call').textContent=winner?'Bingo!':!active?'Next Call —':due?'Call Ball Now':'Next Call '+Math.ceil(nextCall-elapsed)+'s';
  $('served').textContent='Served '+served;
@@ -209,6 +212,7 @@ function end(confirmed,title){
 }
 $('start').addEventListener('click',()=>{
  bootAudio();
+ if(preview){playCutsceneReel();return;}
  if(advanced)week++;
  else {week=1;campaignPerfect=true;campaignMisses=0;totalServed=0;}
  advanced=false;setup();active=true;$('cover').hidden=true;$('touch-controls').hidden=!mobile.matches;
@@ -263,7 +267,7 @@ function oval(x,y,rx,ry,color){
  ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill();
 }
 function text(value,x,y,size,color='#ffedc1',align='center'){
- ctx.font='bold '+size+'px monospace';ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(value,x,y);
+ ctx.font='700 '+size+'px system-ui, sans-serif';ctx.textAlign=align;ctx.fillStyle=color;ctx.fillText(value,x,y);
 }
 function ink(points,color){
  ctx.fillStyle=color;ctx.beginPath();
@@ -335,22 +339,22 @@ function room(){
  rect(29,33,182,27,'#544d4c');
  for(let x=34;x<209;x+=9){rect(x,58,4,9,'#dac1a1');rect(x,58,2,3,'#7b8a8b');}
  rect(26,68,188,25,'#77483d');rect(26,67,188,9,'#d09660');rect(26,77,188,3,'#9c5b44');
- text('KITCHEN WINDOW',120,22,8);
+ text('Kitchen Window',120,23,10);
  for(const [i,station] of stations.entries()){
   rect(station.x-26,71,52,21,'#533437');rect(station.x-25,71,50,2,'#c18a65');
   plate(i,station.x,75,.57);
-  text(['PRETZEL','CUBAN','WINGS'][i],station.x,89,6);
+  text(foods[i],station.x,89,8);
  }
- const ready=active&&!winner&&elapsed>=nextCall;
+ const ready=active&&!winner&&elapsed>=nextCall-1;
  rect(381,64,70,22,'#503440');rect(381,61,70,6,ready?'#ffbf60':'#a86a57');
  rect(400,47,3,15,'#262730');oval(402,46,4,3,'#2c2536');
  oval(429,52,11,8,'#333136');oval(429,51,8,6,'#9d8876');
  for(let i=0;i<5;i++)rect(423+i*3,49+(i%2)*3,2,2,['#e2745c','#edd380','#79b6ad'][i%3]);
- text('BINGO MIC',415,78,7);
+ text('Bingo Mic',415,79,9);
  rect(246,65,66,26,'#573a40');rect(246,64,66,5,'#b78259');
  mug(279,71,.45);
- text('BEER TAP',279,85,7);
- if(ready){rect(382,86,68,3,'#ffd07c');text('CALL NOW',415,98,7,'#4c273a');}
+ text('Beer Tap',279,86,9);
+ if(ready){rect(382,86,68,3,'#ffd07c');text('Call Now',415,100,8,'#4c273a');}
  for(const x of [19,453])for(const y of [116,176,242]){
   rect(x-4,y,9,29,'#354d67');rect(x-4,y,3,28,'#56839d');
  }
@@ -391,7 +395,7 @@ function draw(){
  actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
  if(lastBall&&elapsed<bannerUntil){
   rect(205,33,66,38,'#372438');rect(207,35,62,34,'#fff0cc');
-  text('CALLED',238,46,7,'#7b4f55');text(lastBall,238,62,15,'#4b3041');
+  text('Called',238,46,9,'#7b4f55');text(lastBall,238,62,15,'#4b3041');
  }
 }
 function mug(x,y,scale=1){
@@ -466,9 +470,30 @@ function portrait(x,y,kind,options={}){
  }
  ctx.restore();
 }
+function drawGulp(age){
+ const lift=clamp(age/.48,0,1);
+ const lower=clamp((age-1.06)/.48,0,1);
+ const hold=Math.sin((lift-lower)*Math.PI/2);
+ const tilt=-.53*hold;
+ const x=290-41*hold,y=208-45*hold;
+ const gripX=x+14*Math.cos(tilt)+3*Math.sin(tilt);
+ const gripY=y+14*Math.sin(tilt)-3*Math.cos(tilt);
+ ctx.save();
+ ctx.lineCap='round';ctx.lineJoin='round';
+ for(const [width,color] of [[19,'#705467'],[15,'#f3e4d5']]){
+  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
+  ctx.moveTo(304,190);ctx.quadraticCurveTo(326,218,gripX,gripY);ctx.stroke();
+ }
+ oval(gripX,gripY,8,7,'#d08b71');
+ ctx.translate(x,y);ctx.rotate(tilt);
+ mug(0,0,1);
+ oval(14,-3,5.5,6,'#e6a983');
+ rect(12,-7,3,2,'#f5b992');rect(13,-3,4,1,'#cd896d');
+ ctx.restore();
+}
 function caption(who,line){
  rect(0,231,480,69,'#251b29');rect(0,231,480,2,'#c48a62');
- text(who,22,252,10,'#e6a577','left');text(line,22,276,15,'#fff0d9','left');
+ text(who,22,252,11,'#e6a577','left');text(line,22,276,16,'#fff0d9','left');
 }
 function drawCloseup(now){
  const age=(now-cut.at)/1000;
@@ -481,8 +506,9 @@ function drawCloseup(now){
    portrait(240,143+(closed?2:0),'customer',{shirt:cut.detail.table.shirts[0],scale:zoom});
    caption('CUSTOMER',(cut.detail.order===2?'Where are my wings?!':'Where is my '+['pretzel','Cuban'][cut.detail.order]+'?!'));
   }else{
-   portrait(240,143,'doc',{scale:zoom,sweat:Math.max(1,(age-1.65)*40)});
-   mug(223,181-Math.sin(Math.min(1,(age-1.65)/1.22)*Math.PI)*40,1.15);
+   const gulpAge=age-1.65;
+   portrait(240,143,'doc',{scale:zoom,sweat:clamp((gulpAge-.3)*41,1,44)});
+   drawGulp(gulpAge);
    caption('DOCTOR BINGO','Gulp.');
   }
  }else if(cut.kind==='nice'){
@@ -515,7 +541,22 @@ function drawCloseup(now){
  }
 }
 
+function playCutsceneReel(){
+ active=false;
+ $('cover').hidden=true;
+ $('touch-controls').hidden=true;
+ $('status').textContent='Cutscene Preview';
+ cutTo('miss',{table:tables[0],order:2},()=>{
+  cutTo('nice',null,()=>cutTo('mario',null,()=>cutTo('king',null,()=>{
+   $('heading').textContent='Cutscene Preview Complete';
+   $('message').textContent='Replay the close-ups or return to the game.';
+   $('start').textContent='Replay Cutscenes';
+   $('cover').hidden=false;
+  })));
+ });
+}
 setup();
+if(preview)playCutsceneReel();
 function frame(now){
  const dt=Math.min(.05,(now-(last||now))/1000);last=now;
  if(cut){
