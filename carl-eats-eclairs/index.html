@@ -7,7 +7,7 @@
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
 <link rel="stylesheet" href="../shared/player/blueprint/components.css">
-<link rel="stylesheet" href="../shared/player/layout.css?v=thumb-spacing">
+<link rel="stylesheet" href="../shared/player/layout.css?v=landscape-fit">
 <script type="module" src="../shared/player/layout.js"></script>
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
@@ -22,12 +22,12 @@ header button {
 *{box-sizing:border-box}body{margin:0;background:#231b2b;color:#fff1ce;font:600 15px system-ui,sans-serif}main{width:min(960px,96vw);margin:24px auto}header,footer,#hud{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}h1{font:700 clamp(26px,5vw,52px) Georgia;margin:4px 0 14px;color:#ffd687}button{background:#ffd687;color:#301c2b;border:0;border-radius:6px;padding:9px 14px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid white;outline-offset:3px}#hud{background:#3c2a40;padding:10px 14px;border-radius:8px 8px 0 0;font-variant-numeric:tabular-nums}#stage{position:relative;background:#342238}canvas{display:block;width:100%;image-rendering:pixelated}#overlay{position:absolute;inset:0;display:grid;align-items:center;justify-items:center;background:#24182c88;padding:10px}#overlay[hidden]{display:none}article{width:min(460px,100%);text-align:center;background:#34243af5;border:2px solid #e5a662;padding:clamp(8px,3vw,24px);border-radius:10px}h2{font:700 clamp(19px,4vw,38px) Georgia;margin:0;color:#ffdb91}p{margin:8px 0 12px}#credits[hidden]{display:none}#credits{color:#ead6dc}#overlay.ending{background:#231b2b}#overlay.ending article{animation:appear .55s ease-out}@keyframes appear{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){#overlay.ending article{animation:none}}footer{padding:10px 0;color:#ead6dc}#touch, #touch-help { display: none; }
 #joystick {
   width: 108px; aspect-ratio: 1; position: relative; display: grid; place-items: center;
-  border: 2px solid #e5a662; border-radius: 50%; background: #3c2a40;
-  box-shadow: inset 0 0 0 9px #231b2b; touch-action: none; user-select: none;
+  border-radius: 50%;
+  touch-action: none; user-select: none;
 }
 #stick {
-  width: 42%; aspect-ratio: 1; border-radius: 50%; background: #ffd687;
-  box-shadow: 0 3px 0 #a66a47; pointer-events: none;
+  border-radius: 50%;
+  pointer-events: none;
 }
 #throw { min-width: 72px; min-height: 56px; touch-action: none; user-select: none; }
 #throw:active { background: #ffebbc; }
@@ -51,16 +51,18 @@ header button {
     width: min(1200px, 100%); height: calc(100dvh - var(--arcade-nav-height)); margin: auto;
     padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
       max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
-    display: grid; grid-template: auto auto minmax(0, 1fr) / minmax(0, 1fr);
+    display: block;
     container-type: size;
   }
-  header { margin: 0; flex-wrap: nowrap; }
+  main > .arcade-game-area { display: flow-root; padding: 5px; }
+  main > .arcade-game-area .arcade-theme-bar { float: right; margin: 0 0 0 8px; }
+  header { margin: 0 0 4px; flex-wrap: nowrap; min-height: 44px; }
   h1 { font-size: clamp(18px, 5dvh, 26px); margin: 0; }
   header button { min-height: 44px; padding: 4px 9px; font-size: 14px; }
   #hud { display: flex; gap: 4px; flex-wrap: nowrap; font-size: 14px; padding: 3px 8px; }
   #stage {
-    justify-self: center; align-self: center;
-    width: min(calc(100cqw - 188px - 2 * max(var(--arcade-thumb-left), var(--arcade-thumb-right))), calc((100cqh - 74px) * 384 / 232));
+    margin: 4px auto 0;
+    width: min(calc(100cqw - 164px - 2 * max(var(--arcade-thumb-left), var(--arcade-thumb-right))), calc((100cqh - 86px) * 384 / 232));
     aspect-ratio: 384 / 232;
   }
   footer { display: none; }
@@ -70,8 +72,8 @@ header button {
     pointer-events: none;
   }
   #touch > * { pointer-events: auto; }
-  #joystick { width: clamp(64px, 24dvh, 100px); }
-  #throw { min-width: 64px; }
+  #joystick { width: 76px; }
+  #throw { width: 68px; height: 68px; padding: 0; }
   article { padding: 6px; max-height: 100%; overflow: auto; }
   article p { margin: 4px 0; }
   #overlay { overflow: auto; }
@@ -93,7 +95,7 @@ main .arcade-game-area #stage{overflow:hidden;border-radius:10px}
 <footer><span id="keyboard-help">Move with WASD or arrows · Space throws a controller · P pauses</span><span id="touch-help">Drag the joystick to move. Tap or hold Throw.</span></footer>
 </section>
 <div class="arcade-controls-area arcade-key-row" aria-label="Controls"><kbd>← ↑ ↓ →</kbd> Move <kbd>Space</kbd> Throw</div>
-<div id="touch" class="arcade-controls-area" aria-label="Controls"><div id="joystick" role="group" aria-label="Drag joystick to move"><div id="stick"></div></div><span class="arcade-move-caption">Move</span><button id="throw" type="button">Throw</button></div>
+<div id="touch" class="arcade-controls-area" aria-label="Controls"><div id="joystick" class="arcade-legacy-stick" role="group" aria-label="Drag joystick to move"><div id="stick"></div></div><span class="arcade-move-caption">Move</span><button id="throw" class="arcade-legacy-action" type="button">Throw</button></div>
 </main>
 <script>
 'use strict';

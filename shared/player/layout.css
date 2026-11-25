@@ -38,3 +38,28 @@
   --arcade-thumb-right: max(var(--arcade-thumb-inset), calc(env(safe-area-inset-right, 0px) + 12px));
   --arcade-thumb-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 6px));
 }
+
+@media (any-pointer: coarse) {
+  .arcade-legacy-stick {
+    border: 2px solid #92736c;
+    background: #2b2231;
+    box-shadow: none;
+  }
+  .arcade-legacy-stick > :first-child {
+    box-sizing: border-box;
+    width: 50%;
+    height: auto;
+    aspect-ratio: 1;
+    border: 2px solid #92736c;
+    background: #816374;
+    box-shadow: none;
+  }
+  .arcade-legacy-action {
+    border: 1px solid #92736c;
+    border-radius: 50%;
+    background: #4d3948;
+    color: #fff4e6;
+    font: 700 .85rem system-ui;
+    box-shadow: none;
+  }
+}

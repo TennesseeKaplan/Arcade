@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Kyle - A Derm’s Life</title>
 <link rel="stylesheet" href="../shared/player/game-page.css">
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
 <link rel="stylesheet" href="../shared/player/blueprint/components.css">
-<link rel="stylesheet" href="../shared/player/layout.css">
+<link rel="stylesheet" href="../shared/player/layout.css?v=landscape-fit">
 <script type="module" src="../shared/player/layout.js"></script>
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
@@ -274,24 +274,17 @@
       margin-right: auto;
       display: grid;
       place-items: center;
-      border: 1px solid #708076;
       border-radius: 50%;
-      background: #152522;
-      box-shadow: inset 0 2px 5px #061713;
       cursor: grab;
       touch-action: none;
       user-select: none;
       pointer-events: auto;
     }
-    #knob { width: 23px; height: 23px; border-radius: 50%; background: #879588; box-shadow: inset 0 1px #b5c1aa, 0 1px 3px #071410; pointer-events: none; }
+    #knob { border-radius: 50%; pointer-events: none; }
     #movement .ab {
       width: 44px;
       min-height: 44px;
       border-radius: 50%;
-      color: #fbe7da;
-      background: #703f49;
-      border-color: #be8388;
-      box-shadow: 0 2px #3a252b;
       padding: 0;
       pointer-events: auto;
     }
@@ -427,6 +420,20 @@
  .game .arcade-game-area .scene-frame{--display-height:max(126px,calc(100dvh - 182px - var(--arcade-nav-height)))}
 }
 @media(max-width:600px){.game .arcade-game-area .panel{grid-template-areas:"readout" "status" "meter"}}
+@media(any-pointer:coarse) and (orientation:landscape) and (min-width:650px) and (max-height:460px){
+ .game .arcade-game-area .scene-frame{
+  --display-height:max(150px,calc(100dvh - 108px - var(--arcade-nav-height)));
+  max-width:calc(100vw - 252px - 2 * max(var(--arcade-thumb-left), var(--arcade-thumb-right)));
+ }
+ .game .arcade-game-area .panel{min-height:32px}
+ .game #control-area:has(#movement:not([hidden])){padding:0;margin:0;border:0}
+ .game #control-area #movement{
+  position:fixed;inset:auto var(--arcade-thumb-right) calc(var(--arcade-thumb-bottom) + 14px) var(--arcade-thumb-left);
+  z-index:3;--pad-stick:76px;--pad-button:56px;
+ }
+ #movement .arcade-move-caption{display:none}
+ main.is-dream .scene-frame,main[data-phase=dream] .scene-frame{max-width:none}
+}
 </style>
 </head>
 <body>
@@ -477,9 +484,9 @@
     <section id="control-area" class="bp5-card arcade-controls-area" aria-label="Controls">
       <div id="actions"></div>
       <div id="movement" aria-label="Game controls">
-        <div id="stick" aria-label="Movement joystick"><span id="knob"></span></div><span class="arcade-move-caption">Move</span>
-        <button class="ab" id="game-a" type="button" aria-label="A"><span class="pad-letter">A</span><span class="pad-action" id="pad-a-label"></span></button>
-        <button class="ab" id="game-b" type="button" aria-label="B"><span class="pad-letter">B</span><span class="pad-action" id="pad-b-label"></span></button>
+        <div id="stick" class="arcade-legacy-stick" aria-label="Movement joystick"><span id="knob"></span></div><span class="arcade-move-caption">Move</span>
+        <button class="ab arcade-legacy-action" id="game-a" type="button" aria-label="A"><span class="pad-letter">A</span><span class="pad-action" id="pad-a-label"></span></button>
+        <button class="ab arcade-legacy-action" id="game-b" type="button" aria-label="B"><span class="pad-letter">B</span><span class="pad-action" id="pad-b-label"></span></button>
       </div>
     </section>
   </div>
