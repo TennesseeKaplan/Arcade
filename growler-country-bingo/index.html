@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../shared/player/controller.css">
 <link rel="stylesheet" href="../shared/player/control-surface.css">
 <link rel="stylesheet" href="../shared/player/blueprint/components.css">
-<link rel="stylesheet" href="../shared/player/layout.css">
+<link rel="stylesheet" href="../shared/player/layout.css?v=thumb-spacing">
 <script type="module" src="../shared/player/game-page.js"></script>
 <script type="module" src="../shared/player/layout.js"></script>
 <style>
@@ -66,9 +66,9 @@ canvas{display:block;width:100%;height:auto;background:#352535}
 #call[data-due=true]{color:#a02c1a}
 .arcade-dark #call[data-due=true]{color:#ffb16e}
 @media(any-pointer:coarse) and (orientation:landscape) and (min-width:600px) and (max-height:540px){
- main{width:min(calc(100vw - 185px),calc((100dvh - 150px)*1.6));min-width:250px}
+ main{width:min(calc(100vw - 162px - 2 * max(var(--arcade-thumb-left), var(--arcade-thumb-right))),calc((100dvh - 150px)*1.6));min-width:250px}
  .arcade-game-area{padding:5px}
- #touch-controls{position:fixed;inset:auto 5px 7px;width:auto;margin:0;padding:0;background:none;border:0;box-shadow:none;pointer-events:none}
+ #touch-controls{position:fixed;inset:auto var(--arcade-thumb-right) var(--arcade-thumb-bottom) var(--arcade-thumb-left);width:auto;margin:0;padding:0;background:none;border:0;box-shadow:none;pointer-events:none}
  #touch-controls #inputs{pointer-events:none}
  #touch-controls .arcade-action-buttons,#touch-controls .arcade-joystick{pointer-events:auto}
  #touch-controls .arcade-move-caption{display:none}

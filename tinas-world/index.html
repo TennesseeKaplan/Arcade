@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="../shared/player/controller.css?v=2">
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/blueprint/components.css">
-<link rel="stylesheet" href="../shared/player/layout.css">
+<link rel="stylesheet" href="../shared/player/layout.css?v=thumb-spacing">
 <script type="module" src="../shared/player/layout.js"></script>
 <style>
 :root{color-scheme:light;background:#301529;color:#54244a;font-family:system-ui,sans-serif}
@@ -33,9 +33,9 @@ button:focus-visible,input:focus-visible{outline:3px solid #673785;outline-offse
 .touch-action-label{display:none}
 @media(any-pointer:coarse){.key-action-label{display:none}.touch-action-label{display:inline}}
 @media(any-pointer:coarse) and (orientation:landscape) and (max-height:540px) and (min-width:550px){
-  body{padding:4px 96px}
+  body{padding:4px calc(90px + max(var(--arcade-thumb-left), var(--arcade-thumb-right)))}
   #game{width:min(100%,calc((100dvh - 46px - var(--arcade-nav-height))*1.7778))}
-  #controls{position:fixed;bottom:6px;left:3px;right:3px;width:auto;padding:0;background:none;pointer-events:none}
+  #controls{position:fixed;bottom:var(--arcade-thumb-bottom);left:var(--arcade-thumb-left);right:var(--arcade-thumb-right);width:auto;padding:0;background:none;pointer-events:none}
   #controls .arcade-joystick,#controls button{pointer-events:auto}
 }
 canvas{display:block;width:100%;height:auto;image-rendering:pixelated}

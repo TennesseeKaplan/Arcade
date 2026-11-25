@@ -7,7 +7,7 @@
 <script type="module" src="../shared/player/game-page.js"></script>
 <link rel="stylesheet" href="../shared/player/control-surface.css">
 <link rel="stylesheet" href="../shared/player/blueprint/components.css">
-<link rel="stylesheet" href="../shared/player/layout.css">
+<link rel="stylesheet" href="../shared/player/layout.css?v=thumb-spacing">
 <script type="module" src="../shared/player/layout.js"></script>
 <style>
 /* Keep rapid taps and holds in the game while leaving page zoom available. */
@@ -60,13 +60,13 @@ header button {
   #hud { display: flex; gap: 4px; flex-wrap: nowrap; font-size: 14px; padding: 3px 8px; }
   #stage {
     justify-self: center; align-self: center;
-    width: min(calc(100cqw - 184px), calc((100cqh - 74px) * 384 / 232));
+    width: min(calc(100cqw - 188px - 2 * max(var(--arcade-thumb-left), var(--arcade-thumb-right))), calc((100cqh - 74px) * 384 / 232));
     aspect-ratio: 384 / 232;
   }
   footer { display: none; }
   #touch {
-    position: fixed; bottom: max(10px, env(safe-area-inset-bottom));
-    left: max(6px, env(safe-area-inset-left)); right: max(6px, env(safe-area-inset-right));
+    position: fixed; bottom: var(--arcade-thumb-bottom);
+    left: var(--arcade-thumb-left); right: var(--arcade-thumb-right);
     pointer-events: none;
   }
   #touch > * { pointer-events: auto; }

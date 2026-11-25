@@ -30,3 +30,11 @@
 .arcade-move-caption{font:650 .68rem system-ui;color:var(--arcade-text)}
 .arcade-controls-area[hidden],.arcade-key-row[hidden]{display:none!important}
 @media(any-pointer:coarse){.arcade-key-row{display:none}}
+
+/* Give landscape thumbs a gutter beyond the browser's safe area. */
+:root {
+  --arcade-thumb-inset: clamp(24px, 3.5vw, 38px);
+  --arcade-thumb-left: max(var(--arcade-thumb-inset), calc(env(safe-area-inset-left, 0px) + 12px));
+  --arcade-thumb-right: max(var(--arcade-thumb-inset), calc(env(safe-area-inset-right, 0px) + 12px));
+  --arcade-thumb-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 6px));
+}

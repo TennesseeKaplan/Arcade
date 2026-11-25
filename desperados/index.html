@@ -3,7 +3,7 @@
 <title>Desperados — Jack and Danny</title>
 <link rel="stylesheet" href="../shared/player/controller.css">
 <link rel="stylesheet" href="../shared/player/blueprint/components.css">
-<link rel="stylesheet" href="../shared/player/layout.css">
+<link rel="stylesheet" href="../shared/player/layout.css?v=thumb-spacing">
 <script type="module" src="../shared/player/layout.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#201722;color:#fff0ce;font:16px system-ui}main{max-width:860px;margin:auto;padding:12px}
@@ -23,12 +23,12 @@ footer {font-size:.82rem;min-height:44px}
 footer a {margin-left:5px;padding:8px 5px}
 #music {min-height:36px}
 @media (any-pointer:coarse) and (orientation:landscape) and (min-width:570px) and (max-height:540px) {
-  main {max-width:min(calc((100dvh - 86px - var(--arcade-nav-height)) * 1.7778), calc(100vw - 318px));min-width:250px;padding:4px}
+  main {max-width:min(calc((100dvh - 86px - var(--arcade-nav-height)) * 1.7778), calc(100vw - 306px - 2 * max(var(--arcade-thumb-left), var(--arcade-thumb-right))));min-width:250px;padding:4px}
   header {margin-bottom:3px}
   header h1 {font-size:1.6rem}
   header p {font-size:.75rem}
   footer {padding:2px 0;font-size:.75rem}
-  #touch {position:fixed;left:max(6px,env(safe-area-inset-left));right:max(6px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom));width:auto;min-height:0;margin:0;padding:0;background:none;border:0;pointer-events:none}
+  #touch {position:fixed;left:var(--arcade-thumb-left);right:var(--arcade-thumb-right);bottom:var(--arcade-thumb-bottom);width:auto;min-height:0;margin:0;padding:0;background:none;border:0;pointer-events:none}
   #touch .arcade-dpad,#touch .arcade-action-buttons {pointer-events:auto}
 }
 #results {padding:clamp(12px,4vw,32px);border:1px solid #957050;background:#2b202c}
