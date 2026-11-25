@@ -21,12 +21,13 @@ const player={x:224,y:198,face:1,moving:false};
 const mobile=matchMedia('(any-pointer:coarse)');
 const duration=60, weeks=5, missLimit=3;
 const interval=()=>4.05-week*.12;
-const grace=()=>4.5-week*.22;
+const houseDelay=1.5;
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const called=new Set();
 let active=false, elapsed=0, nextCall=0, served=0, lost=0, late=0, timely=0, callIndex=0;
 let week=1, energy=100, campaignPerfect=true, totalServed=0, halfway=false, advanced=false, campaignComplete=false, cut=null;
 let guide='', guideAt=0, lastContext='';
-let lastBall='', bannerUntil=0, winner=null, tray=[], deck=[], feedback='', feedbackUntil=0, last=0;
+let lastBall='', calledByHouse=false, bingoAt=0, bannerUntil=0, winner=null, tray=[], deck=[], feedback='', feedbackUntil=0, last=0;
 let audio, notesAt=0, step=0, muted=false;
 const controls=createController($('inputs'),{
  keys:{...movementKeys,Space:'interact'},joystick:true,buttons:[{action:'interact',label:'Interact',face:'A'}],
@@ -114,13 +115,7 @@ function interact(){
  }else if(here.kind==='mic'){
   if(winner){status('Someone has bingo! Check their table.');return;}
   if(elapsed<nextCall-1){status('The next call isn’t due yet.');return;}
-  const ball=deck[callIndex++];
-  called.add(ball);lastBall=ballLabel(ball);bannerUntil=elapsed+3.1;
-  if(elapsed<=nextCall+grace())timely++;else late++;
-  nextCall=Math.max(nextCall+interval(),elapsed+2.4);
-  fx([46,58,73],.11,.19,'square');
-  winner=tables.find(table=>table.card.every(number=>called.has(number)))??null;
-  if(winner){status('BINGO! Check the flashing table.');fx([72,76,79,84],.19,.13);}
+  callBall(false);
  }else if(here.kind==='win'){
   finishShift();
  }else{
@@ -134,8 +129,24 @@ function interact(){
  }
  updateHud();
 }
+function callBall(byHouse){
+ const ball=deck[callIndex++];
+ called.add(ball);
+ lastBall=ballLabel(ball);
+ calledByHouse=byHouse;
+ bannerUntil=elapsed+3.1;
+ if(byHouse)late++;else timely++;
+ nextCall+=interval();
+ fx([46,58,73],.11,.19,'square');
+ winner=tables.find(table=>table.card.every(number=>called.has(number)))??null;
+ if(winner){
+  bingoAt=performance.now();
+  status('BINGO! Check the flashing table.');
+  fx([60,67,72,76,79,84,88,96],.095,.17);
+ }
+}
 function update(dt){
- elapsed+=dt;
+ if(!winner)elapsed=Math.min(duration,elapsed+dt);
  const [dx,dy]=controls.movement();
  player.moving=Boolean(dx||dy);
  if(dx)player.face=Math.sign(dx);
@@ -146,6 +157,9 @@ function update(dt){
  const blocked=(x,y)=>tables.some(t=>Math.abs(x-t.x)<29&&Math.abs(y-t.y)<18);
  if(!blocked(mx,player.y))player.x=mx;
  if(!blocked(player.x,my))player.y=my;
+ if(winner)return;
+ if(elapsed>=nextCall+houseDelay)callBall(true);
+ if(winner)return;
  for(const table of tables){
   if(table.order!==null&&elapsed>=table.expires){
    const order=table.order;
@@ -161,7 +175,7 @@ function update(dt){
   halfway=true;
   cutTo('nice');return;
  }
- if(elapsed>=duration)end(false,'Closing Time');
+
 }
 function updateHud(){
  const remain=Math.max(0,Math.ceil(duration-elapsed));
@@ -373,17 +387,19 @@ function room(){
 }
 function tableArt(table,i){
  const {x,y}=table;
+ const jumping=table===winner&&!reducedMotion.matches;
+ const bounce=jumping?Math.abs(Math.sin(performance.now()/150))*10:0;
  oval(x,y+4,31,18,'#6b423d77');
  rect(x-32,y-5,11,18,'#45657d');rect(x+21,y-5,11,18,'#45657d');
- sprite(x-30,y+8,table.shirts[0],i%2?'#b57960':'#e2aa82','#59404a');
- sprite(x+30,y+9,table.shirts[1],i%2?'#efb590':'#b87d61','#79534a');
+ sprite(x-30,y+8-bounce,table.shirts[0],i%2?'#b57960':'#e2aa82','#59404a');
+ sprite(x+30,y+9-bounce*.8,table.shirts[1],i%2?'#efb590':'#b87d61','#79534a');
  oval(x,y,29,15,table===winner?'#f0b65a':'#754941');
  oval(x,y-3,27,12,table===winner?'#ffc866':'#d29a6a');
  rect(x-11,y-9,21,13,'#fff0cc');
  for(let k=0;k<5;k++)rect(x-9+k*4,y-6,3,4,called.has(table.card[k])?'#b75f6f':'#b7a98e');
  rect(x+13,y-9,4,7,'#79a8ab');rect(x+13,y-9,4,2,'#c0d4c7');
  if(table===winner){
-  rect(x-23,y-46,46,13,'#42283a');text('BINGO!',x,y-36,10,'#ffd37b');
+  text('VERIFY HERE',x,y-30,10,'#fff0bd');
  }else if(table.order!==null){
   rect(x-21,y-62,42,31,'#604345');rect(x-20,y-61,40,27,'#fff0cb');
   plate(table.order,x,y-48,1.04);
@@ -401,10 +417,37 @@ function draw(){
   },
  }];
  actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
- if(lastBall&&elapsed<bannerUntil){
+ if(winner){
+  bingoCelebration();
+ }else if(lastBall&&elapsed<bannerUntil){
   rect(205,33,66,38,'#372438');rect(207,35,62,34,'#fff0cc');
-  text('Called',238,46,9,'#7b4f55');text(lastBall,238,62,15,'#4b3041');
+  text(calledByHouse?'House Call':'Called',238,46,9,'#7b4f55');text(lastBall,238,62,15,'#4b3041');
  }
+}
+function bingoCelebration(){
+ const age=(performance.now()-bingoAt)/1000;
+ const motion=!reducedMotion.matches;
+ const beat=motion?(1+Math.sin(age*8))/2:.55;
+ const colors=['#ffc76b','#ff87bc','#75e6cf','#a6b5ff'];
+ const {x,y}=winner;
+ ctx.save();
+ ctx.globalAlpha=.22+beat*.16;
+ ink([[x-14,14],[x+14,14],[x+57,y+17],[x-57,y+17]],'#ffd183');
+ ctx.restore();
+ for(let i=0;i<24;i++){
+  const angle=i*Math.PI/12+(motion?age*.65:0);
+  const radius=42+(i%3)*8;
+  rect(x+Math.cos(angle)*radius,y-14+Math.sin(angle)*radius*.52,3,4,colors[i%4]);
+ }
+ const top=age<2.6?29:12;
+ const size=age<2.6?43:25;
+ rect(158,top,164,size+14,'#392037');
+ for(let i=0;i<14;i++){
+  const color=colors[(i+Math.floor(beat*3))%4];
+  oval(164+i*11.5,top+4,2,2,color);
+  oval(164+i*11.5,top+size+10,2,2,color);
+ }
+ text('BINGO!',240,top+size+3,size,beat>.5?'#fff0b2':'#ffc46e');
 }
 function mug(x,y,scale=1){
  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
