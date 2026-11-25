@@ -38,6 +38,20 @@ canvas{display:block;width:100%;height:auto;background:#352535}
 #hud{font-variant-numeric:tabular-nums}
 #energy-block{display:inline-flex;align-items:center;gap:4px}
 #energy{width:55px;height:.65rem;accent-color:#cf8b47}
+#energy-block[data-low=true]{
+ color:#a71e36;
+ background:#ffe4e8;
+ border-radius:5px;
+ padding:2px 5px;
+ font-weight:700;
+ animation:energy-warning 1.15s ease-in-out infinite alternate;
+}
+#energy-block[data-low=true] #energy{width:80px;height:1rem}
+#energy-block[data-low=true] #energy::-webkit-meter-optimum-value{background:#cc2942}
+#energy-block[data-low=true] #energy::-moz-meter-bar{background:#cc2942}
+@keyframes energy-warning{to{background:#ffbcc7;box-shadow:0 0 0 2px #eb536988}}
+@media(prefers-reduced-motion:reduce){#energy-block[data-low=true]{animation:none}}
+
 #screen{touch-action:manipulation}
 #tray span{display:inline-block;padding:0 .12em}
 #inputs{margin-top:0;padding:2px 2px}
@@ -85,5 +99,5 @@ canvas{display:block;width:100%;height:auto;background:#352535}
 if (matchMedia('(any-pointer: coarse) and (orientation: landscape)').matches) {
  document.getElementById('how-to').open = false;
 }
-</script><script type="module" src="game.js?v=bingo-party"></script></body>
+</script><script type="module" src="game.js?v=energy-alert"></script></body>
 </html>

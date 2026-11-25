@@ -187,12 +187,15 @@ function updateHud(){
  $('week').textContent='Wednesday '+week+' / '+weeks;
  $('missed').textContent='Misses '+lost+' / '+missLimit;
  const energyValue=Math.round(energy);
+ const lowEnergy=energyValue<50;
+ const energyBlock=$('energy-block');
+ if(energyBlock.dataset.low!==String(lowEnergy))energyBlock.dataset.low=String(lowEnergy);
  $('energy').value=energyValue;
  $('energy-value').textContent=energyValue+'%';
  $('tray').textContent='Plates '+tray.length+' / 2'+(tray.length?' · '+tray.map(i=>foods[i]).join(', '):'');
  if(!active)return;
  const here=target();
- const context=winner?'Verify the winning card at the flashing table.':due?'Call the next ball at the mic.':energy<40?'Low energy. Take a beer break at the tap.':
+ const context=winner?'Verify the winning card at the flashing table.':due?'Call the next ball at the mic.':lowEnergy?'Low energy. Take a beer break at the tap.':
    here?.kind==='food'?'Pick Up '+here.station.food:here?.kind==='table'?'Serve the Table':here?.kind==='tap'?'Refill Energy':
    'Serve orders and keep an eye on the next call.';
  const urgent=winner||due;
