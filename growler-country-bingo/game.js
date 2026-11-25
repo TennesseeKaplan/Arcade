@@ -104,7 +104,7 @@ function interact(){
   tray.push(foods.indexOf(here.station.food));
   fx([71,77],.09,.12);
  }else if(here.kind==='tap'){
-  if(energy>=99){status('Energy is already full.');return;}
+  if(Math.round(energy)===100){status('Energy is already full.');updateHud();return;}
   cutTo('refill',null,()=>{
    energy=Math.min(100,energy+65);
    status('Energy Refilled');
@@ -220,6 +220,7 @@ $('start').addEventListener('click',()=>{
  if(advanced)week++;
  else {week=1;campaignPerfect=true;campaignMisses=0;totalServed=0;}
  advanced=false;setup();active=true;$('cover').hidden=true;$('touch-controls').hidden=!mobile.matches;
+ $('how-to').open=false;
  $('start').blur();updateHud();fx([60,67,72],.16,.14);
 });
 $('sound').addEventListener('click',()=>{
