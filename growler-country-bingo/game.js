@@ -19,8 +19,8 @@ const seats=[
 let tables=[];
 const player={x:224,y:198,face:1,moving:false};
 const mobile=matchMedia('(any-pointer:coarse)');
-const duration=90, weeks=5, missLimit=3;
-const interval=()=>5.15-week*.17;
+const duration=60, weeks=5, missLimit=3;
+const interval=()=>4.05-week*.12;
 const grace=()=>4.5-week*.22;
 const called=new Set();
 let active=false, elapsed=0, nextCall=0, served=0, lost=0, late=0, timely=0, callIndex=0;
@@ -73,7 +73,7 @@ function status(message){
  feedback=message;feedbackUntil=elapsed+3.8;
 }
 function cutTo(kind, detail=null, after=null){
- cut={kind, detail, after, at:performance.now(), seconds:{miss:3.4,nice:2.05,mario:3.5,king:5}[kind]};
+ cut={kind, detail, after, at:performance.now(), seconds:{miss:3.4,refill:1.64,nice:2.05,mario:3.5,king:5}[kind]};
  $('touch-controls').hidden=true;
  fx(kind==='miss'?[52,44]:kind==='nice'?[68,76,84]:[60,67,72,79],.2,.13);
 }
@@ -104,9 +104,13 @@ function interact(){
   tray.push(foods.indexOf(here.station.food));
   fx([71,77],.09,.12);
  }else if(here.kind==='tap'){
-  energy=Math.min(100,energy+65);
-  status('Energy Refilled');
-  fx([48,55,63],.13,.14);
+  if(energy>=99){status('Energy is already full.');return;}
+  cutTo('refill',null,()=>{
+   energy=Math.min(100,energy+65);
+   status('Energy Refilled');
+   fx([48,55,63],.13,.14);
+   updateHud();
+  });
  }else if(here.kind==='mic'){
   if(winner){status('Someone has bingo! Check their table.');return;}
   if(elapsed<nextCall-1){status('The next call isn’t due yet.');return;}
@@ -136,7 +140,7 @@ function update(dt){
  player.moving=Boolean(dx||dy);
  if(dx)player.face=Math.sign(dx);
  const pace=.56+.44*(energy/100)**.3;
- energy=Math.max(0,energy-dt*(player.moving?1.55:.27));
+ energy=Math.max(0,energy-dt*(player.moving?2.35:.35));
  const mx=clamp(player.x+dx*128*dt*pace,22,458);
  const my=clamp(player.y+dy*122*dt*pace,93,281);
  const blocked=(x,y)=>tables.some(t=>Math.abs(x-t.x)<29&&Math.abs(y-t.y)<18);
@@ -174,7 +178,7 @@ function updateHud(){
  $('tray').textContent='Plates '+tray.length+' / 2'+(tray.length?' · '+tray.map(i=>foods[i]).join(', '):'');
  if(!active)return;
  const here=target();
- const context=winner?'Verify the winning card at the flashing table.':due?'Call the next ball at the mic.':energy<25?'Refill at the beer tap.':
+ const context=winner?'Verify the winning card at the flashing table.':due?'Call the next ball at the mic.':energy<40?'Low energy. Take a beer break at the tap.':
    here?.kind==='food'?'Pick Up '+here.station.food:here?.kind==='table'?'Serve the Table':here?.kind==='tap'?'Refill Energy':
    'Serve orders and keep an eye on the next call.';
  const urgent=winner||due;
@@ -511,6 +515,10 @@ function drawCloseup(now){
    drawGulp(gulpAge);
    caption('DOCTOR BINGO','Gulp.');
   }
+ }else if(cut.kind==='refill'){
+  portrait(240,143,'doc',{scale:1.07});
+  drawGulp(age);
+  caption('DOCTOR BINGO','Beer break. Refilling energy.');
  }else if(cut.kind==='nice'){
   const shades=clamp((age-.16)/.40,0,1);
   portrait(240,143,'doc',{scale:zoom,grin:shades===1,glasses:age>.16,glassesY:-42*(1-shades)});
@@ -547,12 +555,12 @@ function playCutsceneReel(){
  $('touch-controls').hidden=true;
  $('status').textContent='Cutscene Preview';
  cutTo('miss',{table:tables[0],order:2},()=>{
-  cutTo('nice',null,()=>cutTo('mario',null,()=>cutTo('king',null,()=>{
+  cutTo('refill',null,()=>cutTo('nice',null,()=>cutTo('mario',null,()=>cutTo('king',null,()=>{
    $('heading').textContent='Cutscene Preview Complete';
    $('message').textContent='Replay the close-ups or return to the game.';
    $('start').textContent='Replay Cutscenes';
    $('cover').hidden=false;
-  })));
+  }))));
  });
 }
 setup();

@@ -46,6 +46,9 @@ canvas{display:block;width:100%;height:auto;background:#352535}
 #touch-controls .arcade-action-buttons{order:1}
 #touch-controls .arcade-action-buttons button{width:68px;height:68px}
 @media(any-pointer:fine){#touch-controls{display:none!important}}
+#how-to{margin:0 0 .7rem;font-size:.88rem;line-height:1.4}
+#how-to summary{cursor:pointer;font-weight:700}
+#how-to p{margin:.45rem 0 0}
 #call[data-due=true]{color:#a02c1a}
 .arcade-dark #call[data-due=true]{color:#ffb16e}
 @media(any-pointer:coarse) and (orientation:landscape) and (min-width:600px) and (max-height:540px){
@@ -62,14 +65,25 @@ canvas{display:block;width:100%;height:auto;background:#352535}
 <section class="bp5-card arcade-game-area" aria-label="Game Area">
 <header><div><h1>Doctor Bingo</h1><p class="venue">Growler Country · Tallahassee, FL</p></div>
 <div class="tools arcade-theme-bar"><button class="bp5-button bp5-minimal arcade-theme-toggle" data-arcade-theme type="button">Light Mode</button><button id="sound" class="bp5-button bp5-minimal arcade-theme-toggle" type="button" aria-pressed="false">Mute</button></div></header>
+<details id="how-to" open>
+<summary>How to Play</summary>
+<p>Use the arrow keys or joystick to move. Press <strong>Space</strong> or <strong>A</strong> to interact.</p>
+<p><strong>Serve food.</strong> Match each table’s order icon at the kitchen window. Carry up to two plates. Three missed orders end the run.</p>
+<p><strong>Run bingo.</strong> Call balls at the mic when prompted. Verify bingo at the flashing table before the minute is up. Clear five Wednesdays to win.</p>
+<p><strong>Take a beer break.</strong> Low energy slows Doc down. Interact at the Beer Tap to drink and refill the meter. The shift clock pauses while he drinks.</p>
+</details>
 <div id="floor">
 <canvas id="screen" width="960" height="600" aria-label="Doctor Bingo serves Growler Country’s taproom"></canvas>
 <div id="cover"><article><h2 id="heading">Wednesday Bingo</h2><p id="message">Serve the tables, call the balls, and refill at the beer tap. Make it through five Wednesdays. Three missed orders end the run.</p><button id="start" type="button">Start Shift</button></article></div>
 </div>
-<div id="hud" class="arcade-objectives"><strong id="week">Wednesday 1 / 5</strong><span id="shift">Shift 1:30</span><strong id="call">Next Call —</strong><span id="served">Served 0</span><span id="missed">Misses 0 / 3</span><span id="energy-block"><label for="energy">Energy</label><meter id="energy" min="0" max="100" value="100"></meter><span id="energy-value">100%</span></span><span id="tray">Plates 0 / 2</span></div>
+<div id="hud" class="arcade-objectives"><strong id="week">Wednesday 1 / 5</strong><span id="shift">Shift 1:00</span><strong id="call">Next Call —</strong><span id="served">Served 0</span><span id="missed">Misses 0 / 3</span><span id="energy-block"><label for="energy">Energy</label><meter id="energy" min="0" max="100" value="100"></meter><span id="energy-value">100%</span></span><span id="tray">Plates 0 / 2</span></div>
 <p id="status" role="status">Serve the right order and verify the winning card before closing.</p>
 </section>
 <div id="keyboard-controls" class="arcade-controls-area arcade-key-row" aria-label="Controls"><kbd>← ↑ ↓ →</kbd> Move <kbd>Space</kbd> Interact</div>
 <div id="touch-controls" class="arcade-controls-area" aria-label="Controls" hidden><div id="inputs"><span class="arcade-move-caption">Move</span></div></div>
-</main><script type="module" src="game.js?v=pace"></script></body>
+</main><script>
+if (matchMedia('(any-pointer: coarse) and (orientation: landscape)').matches) {
+ document.getElementById('how-to').open = false;
+}
+</script><script type="module" src="game.js?v=one-minute"></script></body>
 </html>
