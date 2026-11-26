@@ -19,7 +19,7 @@ const seats=[
 let tables=[];
 const player={x:224,y:198,face:1,moving:false};
 const mobile=matchMedia('(any-pointer:coarse)');
-const weeks=5, missLimit=3;
+const weeks=4, missLimit=3;
 const interval=()=>4.05-week*.12;
 const bingoLines=Array.from({length:5},(_,i)=>[
  Array.from({length:5},(_,j)=>5*i+j),Array.from({length:5},(_,j)=>5*j+i),
@@ -227,7 +227,7 @@ function end(confirmed,title){
  $('touch-controls').hidden=true;$('cover').hidden=false;
  $('heading').textContent=title;
  $('message').textContent=confirmed
-  ? week===weeks?'Five Wednesdays complete. Orders served: '+totalServed+'.'
+  ? week===weeks?'Four Wednesdays complete. Orders served: '+totalServed+'.'
     :'Winner verified. Orders served: '+served+' · On-time calls: '+timely+' · Missed orders: '+lost+'.'
   : 'Orders served: '+served+' · On-time calls: '+timely+'.';
  $('start').textContent=advanced?'Next Wednesday':campaignComplete?'Play Again':'Retry Wednesday';
@@ -241,7 +241,6 @@ $('start').addEventListener('click',()=>{
  else if(campaignComplete){week=1;campaignPerfect=true;totalServed=0;}
  campaignComplete=false;
  advanced=false;setup();active=true;$('cover').hidden=true;$('touch-controls').hidden=!mobile.matches;
- $('how-to').open=false;
  $('start').blur();updateHud();fx([60,67,72],.16,.14);
 });
 $('sound').addEventListener('click',()=>{
