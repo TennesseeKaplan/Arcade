@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Legend of Bobby · Coastal Pass</title>
+<link rel="icon" href="index.png">
+<link rel="stylesheet" href="../../shared/player/game-page.css">
+<script type="module" src="../../shared/player/game-page.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#15201d;color:#f6edda;font:16px system-ui,sans-serif}main{max-width:1100px;margin:auto;padding:10px 20px 24px}header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}header img{width:155px}h1{font:700 1.75rem Georgia,serif;margin:0}.build{font-size:.76rem;color:#b3c5b5}.stage{position:relative;background:#293f3b;border:1px solid #667d68;overflow:hidden;border-radius:10px;aspect-ratio:16/9}canvas{width:100%;height:100%;display:block;outline:0}.cover{position:absolute;inset:0;display:grid;place-content:center;text-align:center;background:#17251fe8;padding:20px}.cover[hidden],.dialogue[hidden]{display:none}.cover p{color:#d1dfce}.dialogue{position:absolute;inset:auto 11% 8%;padding:13px 16px;border:1px solid #af8b9f;border-radius:8px;background:#241e2bee}.dialogue strong{color:#ff9ad0}.dialogue p{margin:5px 0 10px}.bar,.editor,.controls{display:flex;gap:8px 15px;align-items:center;flex-wrap:wrap}.bar{justify-content:space-between;margin:8px 0}.controls{font-size:.83rem;color:#c3d2c2;margin-bottom:11px}button,input{font:inherit;color:inherit;background:#293d34;border:1px solid #6b8269;border-radius:6px;padding:7px 10px}button{cursor:pointer}input{flex:1;min-width:190px}button:focus-visible,input:focus-visible,canvas:focus-visible{outline:2px solid #f2c782;outline-offset:-2px}details{border:1px solid #4b655a;border-radius:7px;padding:9px 12px;background:#1e3028}summary{cursor:pointer;font-weight:700}.editor{margin-top:10px}small{display:block;color:#aebfac;margin-top:6px}
+</style>
+</head>
+<body><main>
+<header><img src="../assets/title-logo.png" alt="The Legend of Bobby"><h1>Coastal Pass</h1><span class="build">Playtest BOBBY-001</span></header>
+<div class="stage">
+<canvas id="canvas" width="768" height="432" tabindex="0" aria-label="Coastal Pass 3D playtest"></canvas>
+<div id="cover" class="cover"><div><h2>Coastal Pass</h2><p id="load-status">Follow the path around the bend and try the practice strike.</p><button id="start">Start Playtest</button></div></div>
+<section id="dialogue" class="dialogue" aria-label="Rina dialogue" hidden><strong>Rina</strong><p id="rina-line"></p><button id="continue">Continue</button></section>
+</div>
+<div class="bar"><span id="objective" role="status">Walk around the bend with Rina.</span><span id="count">Swings 0 · Hits 0</span><button id="restart" disabled>Restart</button></div>
+<div class="controls"><span><b>WASD</b> Move</span><span><b>Right-drag / Q E</b> Look</span><span><b>F</b> Recenter</span><span><b>R</b> Talk / Continue</span><span><b>Space</b> Swing</span></div>
+<details><summary>Edit Rina’s Line</summary><div class="editor"><label for="edit-line">Edit Line</label><input id="edit-line" maxlength="160"><button id="preview" disabled>Preview Line</button><button id="replay" disabled>Replay Dialogue</button><button id="reset-line" disabled>Reset to Build Text</button></div><small id="edit-status" role="status">Changes apply to this playtest session.</small></details>
+</main>
+<script src="index.js"></script>
+<script>
+const byId=id=>document.getElementById(id);
+const enabled=['restart','preview','replay','reset-line'];
+const canvas=byId('canvas');
+let command, buildLine;
+function apply(action,value){
+ if(command)command(action,value);
+}
+window.bobbyPlaytest={
+ connectGame(callback,line){
+  command=callback;buildLine=line;byId('edit-line').value=line;
+  apply('start');byId('cover').hidden=true;enabled.forEach(id=>byId(id).disabled=false);canvas.focus();
+ },
+ renderState(raw){
+  const state=JSON.parse(raw);window.bobbyState=state;
+  byId('dialogue').hidden=!state.dialogue;
+  byId('rina-line').textContent=state.line;
+  byId('count').textContent='Swings '+state.swings+' · Hits '+state.hits;
+  const message=state.hits?'Nice hit. Try again or restart the encounter.':
+   state.saidHello?'Walk up to the stone and press Space to strike.':
+    state.talk?'R · Talk to Rina':'Walk around the bend with Rina.';
+  if(byId('objective').textContent!==message)byId('objective').textContent=message;
+ }
+};
+byId('start').onclick=async()=>{
+ byId('start').disabled=true;
+ const config={"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":1251728,"index.wasm":39514754},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+ config.canvas=canvas;
+ const engine=new Engine(config);
+ try{
+  await engine.startGame({onProgress:(current,total)=>{
+   byId('load-status').textContent=total?'Loading '+Math.round(current/total*100)+'%…':'Loading…';
+  }});
+ }catch(error){
+  byId('load-status').textContent='The 3D engine could not start. Reload in a WebGL 2 browser.';
+  console.error(error);
+ }
+};
+for(const [id,action] of [['restart','restart'],['replay','replay'],['continue','continue']]){
+ byId(id).onclick=()=>{apply(action);canvas.focus();};
+}
+byId('preview').onclick=()=>{
+ const text=byId('edit-line').value.trim();
+ if(!text){byId('edit-status').textContent='Enter a line before previewing.';return;}
+ apply('line',text);
+ byId('edit-status').textContent='Line updated. Replay Dialogue to hear the cue and see the new text.';
+};
+byId('reset-line').onclick=()=>{
+ byId('edit-line').value=buildLine;apply('reset_line');
+ byId('edit-status').textContent='Restored the build text.';
+};
+canvas.addEventListener('contextmenu',event=>event.preventDefault());
+</script>
+</body></html>
+

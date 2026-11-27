@@ -54,3 +54,27 @@ Start with Three.js and Rapier if playing through the existing Arcade link remai
 Build one short loop through the town square, boathouse, and spillway. Bobby can explore, talk to the caretaker, find the crank, fit it to the winch, and take the newly exposed path back to town. Include one optional discovery off the critical path. Test the same loop with the clue first and the item first.
 
 Use this slice to see whether the camera keeps Bobby visible in tight spaces, prompts choose the intended target, the landmark guides players without instructions, and touch movement stays comfortable in landscape. If saves are added, test reloading before and after the water lowers. Profile the slice on a real phone before setting scene-size and texture budgets or committing to a larger map.
+
+## Coastal Pass playtest
+
+The current playtest is an original Oʻahu-inspired graybox. It uses Godot 4.7.2 standard, GDScript, the Compatibility renderer and the matching single-threaded Web template. The planning examples above are provisional. This encounter does not establish the story.
+
+[Open the browser playtest](https://tennesseekaplan.github.io/Arcade/legend-of-bobby/preview/).
+
+Start the encounter, take the sandy bend, and use R to talk to Rina. Open **Edit Rina’s Line** to apply a session-only override and replay the beat. The shipped line lives in [rina_first_line.txt](content/dialogue/rina_first_line.txt). Walk toward the stone and use Space to test the swing. The swing and hit counts let you distinguish a miss from a single hit. Restart resets the encounter and keeps the session's test line. Reset to Build Text restores the shipped line.
+
+The prototype uses the approved Bobby mesh with rigid joints. The sword, environment, companion effect, and audio cues are original placeholders. Godot license and third-party notices accompany the [export](preview/licenses/).
+
+### Reproduce the build
+
+From this folder with Godot 4.7.2 and its matching export templates installed:
+
+```sh
+godot --headless --import
+godot --headless --quit-after 120
+godot --headless --export-release Web preview/index.html
+```
+
+Serve the Arcade root over HTTP for browser testing, so the preview can load the shared navigation and logo using their existing relative paths.
+
+With Python Playwright and Chromium available, run `python tests/playtest.py`. It defaults to the local Arcade server on port 8731. Set `BOBBY_PREVIEW` to test a hosted build, or `CHROMIUM_BIN` to use a system Chromium binary.
